@@ -45,7 +45,6 @@ interface InstallPrompt extends Event {
   userChoice: Promise<{ outcome: string }>;
 }
 const navigation = [
-  { id: "weekly", label: "Weekly schedules", icon: Files },
   { id: "calendar", label: "Calendar", icon: CalendarDays },
   { id: "clients", label: "Clients", icon: Users },
   { id: "documents", label: "Documents", icon: Files },
@@ -68,6 +67,7 @@ export default function App() {
   const [studio, setStudio] = useState<StudioState>(structuredClone(defaults)),
     [profiles, setProfiles] = useState<TemplateProfile[]>([]),
     [loading, setLoading] = useState(true),
+    [resourceRevision, setResourceRevision] = useState(0),
     [error, setError] = useState("");
   const studioRef = useRef(studio),
     writeQueue = useRef(Promise.resolve());
@@ -76,6 +76,9 @@ export default function App() {
     [appointment, setAppointment] = useState<Appointment>(),
     [importing, setImporting] = useState(false),
     [mobileMenu, setMobileMenu] = useState(false);
+  const lastStudioPage = useRef<Page>(
+    currentPage() === "weekly" ? "calendar" : currentPage(),
+  );
   const [documentOptions, setDocumentOptions] = useState({
     client: "",
     mode: "calendar" as "calendar" | "spreadsheet",
@@ -112,7 +115,12 @@ export default function App() {
           setLoading(false);
         }
       });
-    const hash = () => setPage(currentPage());
+    const hash = () => {
+      const next = currentPage();
+      if (next !== "weekly") lastStudioPage.current = next;
+      setPage(next);
+      setMobileMenu(false);
+    };
     const on = () => setOnline(true),
       off = () => setOnline(false),
       install = (e: Event) => {
@@ -132,6 +140,7 @@ export default function App() {
     };
   }, []);
   function navigate(next: Page) {
+    if (next !== "weekly") lastStudioPage.current = next;
     location.hash = next;
     setPage(next);
     setMobileMenu(false);
@@ -187,86 +196,89 @@ export default function App() {
     }
   }
   const displayName = studio.settings.trainerName || "Your private studio";
+  const uaMode = page === "weekly";
   return (
-    <div className="app-shell">
-      <aside className={`sidebar ${mobileMenu ? "open" : ""}`}>
-        <a
-          className="brand"
-          href="#weekly"
-          onClick={() => navigate("weekly")}
-        >
-          <span>
-            mase<span className="brand-dot">.</span>
-          </span>
-          <small>THE PRIVATE STUDIO</small>
-        </a>
-        <button
-          className="icon-button mobile-close"
-          aria-label="Close menu"
-          onClick={() => setMobileMenu(false)}
-        >
-          <X size={20} />
-        </button>
-        <div className="workspace-label">WORKSPACE</div>
-        <nav>
-          {navigation.map((item) => (
-            <button
-              key={item.id}
-              className={`nav-item ${page === item.id ? "active" : ""}`}
-              onClick={() => {
-                if (item.id === "documents" && page !== "documents")
-                  documents();
-                else navigate(item.id);
-              }}
-            >
-              <item.icon size={19} strokeWidth={1.6} />
-              {item.label}
-              {page === item.id && <span />}
-            </button>
-          ))}
-        </nav>
-        <div className="sidebar-note">
-          <svg viewBox="0 0 90 90" aria-hidden="true">
-            <path d="M44 77c-3-18 3-38 16-64M44 53C20 53 17 40 20 28c18 1 27 12 24 25M48 42c20-6 24-18 20-30-13 5-22 18-20 30" />
-          </svg>
-          <span>
-            A little more flow.
-            <br />A little less admin.
-          </span>
-          <button className="text-button" onClick={() => documents()}>
-            Create something lovely
-            <ArrowUpRight size={13} />
-          </button>
-        </div>
-        <div className="sidebar-bottom">
-          <button
-            className={`nav-item ${page === "settings" ? "active" : ""}`}
-            onClick={() => navigate("settings")}
+    <div className={`app-shell ${uaMode ? "ua-mode" : "studio-mode"}`}>
+      {!uaMode && (
+        <aside className={`sidebar ${mobileMenu ? "open" : ""}`}>
+          <a
+            className="brand"
+            href="#weekly"
+            onClick={() => navigate("weekly")}
           >
-            <Settings2 size={18} strokeWidth={1.6} />
-            Studio settings
-          </button>
-          <button className="nav-item" onClick={() => navigate("settings")}>
-            <HelpCircle size={18} strokeWidth={1.6} />A little guidance
-          </button>
-          <div className="studio-identity">
-            <span className="avatar">
-              {studio.settings.trainerName
-                ? studio.settings.trainerName
-                    .split(" ")
-                    .slice(0, 2)
-                    .map((s) => s[0])
-                    .join("")
-                : "m."}
-            </span>
             <span>
-              <strong>{displayName}</strong>
-              <small>Made for movement</small>
+              mase<span className="brand-dot">.</span>
             </span>
+            <small>THE PRIVATE STUDIO</small>
+          </a>
+          <button
+            className="icon-button mobile-close"
+            aria-label="Close menu"
+            onClick={() => setMobileMenu(false)}
+          >
+            <X size={20} />
+          </button>
+          <div className="workspace-label">WORKSPACE</div>
+          <nav>
+            {navigation.map((item) => (
+              <button
+                key={item.id}
+                className={`nav-item ${page === item.id ? "active" : ""}`}
+                onClick={() => {
+                  if (item.id === "documents" && page !== "documents")
+                    documents();
+                  else navigate(item.id);
+                }}
+              >
+                <item.icon size={19} strokeWidth={1.6} />
+                {item.label}
+                {page === item.id && <span />}
+              </button>
+            ))}
+          </nav>
+          <div className="sidebar-note">
+            <svg viewBox="0 0 90 90" aria-hidden="true">
+              <path d="M44 77c-3-18 3-38 16-64M44 53C20 53 17 40 20 28c18 1 27 12 24 25M48 42c20-6 24-18 20-30-13 5-22 18-20 30" />
+            </svg>
+            <span>
+              A little more flow.
+              <br />A little less admin.
+            </span>
+            <button className="text-button" onClick={() => documents()}>
+              Create something lovely
+              <ArrowUpRight size={13} />
+            </button>
           </div>
-        </div>
-      </aside>
-      {mobileMenu && (
+          <div className="sidebar-bottom">
+            <button
+              className={`nav-item ${page === "settings" ? "active" : ""}`}
+              onClick={() => navigate("settings")}
+            >
+              <Settings2 size={18} strokeWidth={1.6} />
+              Studio settings
+            </button>
+            <button className="nav-item" onClick={() => navigate("settings")}>
+              <HelpCircle size={18} strokeWidth={1.6} />A little guidance
+            </button>
+            <div className="studio-identity">
+              <span className="avatar">
+                {studio.settings.trainerName
+                  ? studio.settings.trainerName
+                      .split(" ")
+                      .slice(0, 2)
+                      .map((s) => s[0])
+                      .join("")
+                  : "m."}
+              </span>
+              <span>
+                <strong>{displayName}</strong>
+                <small>Made for movement</small>
+              </span>
+            </div>
+          </div>
+        </aside>
+      )}
+      {!uaMode && mobileMenu && (
         <button
           className="menu-backdrop"
           aria-label="Close navigation"
@@ -276,22 +288,49 @@ export default function App() {
       <div className="main-shell">
         <header className="topbar">
           <div>
-            <button
-              className="icon-button mobile-toggle"
-              aria-label="Open navigation"
-              onClick={() => setMobileMenu(true)}
-            >
-              <Menu size={21} />
-            </button>
-            <span>Workspace</span>
-            <ChevronRight size={13} />
-            <strong>
-              {page === "calendar"
-                ? "Schedule"
-                : page[0].toUpperCase() + page.slice(1)}
-            </strong>
+            {uaMode ? (
+              <a
+                className="compact-brand"
+                href="#weekly"
+                onClick={() => navigate("weekly")}
+              >
+                mase<span>.</span>
+              </a>
+            ) : (
+              <>
+                <button
+                  className="icon-button mobile-toggle"
+                  aria-label="Open navigation"
+                  onClick={() => setMobileMenu(true)}
+                >
+                  <Menu size={21} />
+                </button>
+                <span>Workspace</span>
+                <ChevronRight size={13} />
+                <strong>
+                  {page === "calendar"
+                    ? "Schedule"
+                    : page[0].toUpperCase() + page.slice(1)}
+                </strong>
+              </>
+            )}
           </div>
           <div>
+            <div
+              className="workspace-switch"
+              role="group"
+              aria-label="Workspace mode"
+            >
+              <button aria-pressed={uaMode} onClick={() => navigate("weekly")}>
+                UA story
+              </button>
+              <button
+                aria-pressed={!uaMode}
+                onClick={() => navigate(lastStudioPage.current)}
+              >
+                Studio tools
+              </button>
+            </div>
             <span className="connection-status">
               <i className={!online ? "offline" : ""} />
               {!online
@@ -336,7 +375,7 @@ export default function App() {
               </button>
             </Notice>
           )}
-          {studio.settings.demo && (
+          {!uaMode && studio.settings.demo && (
             <div className="demo-banner">
               <span>
                 Sample studio · Fictional clients and sessions for exploring the
@@ -370,7 +409,9 @@ export default function App() {
             </div>
           ) : (
             <>
-              {page === "weekly" && <WeeklySchedules />}
+              <div hidden={!uaMode}>
+                <WeeklySchedules resourceRevision={resourceRevision} />
+              </div>
               {page === "calendar" && (
                 <Calendar
                   studio={studio}
@@ -466,11 +507,13 @@ export default function App() {
                   profiles={profiles}
                   save={(settings) => commit((s) => ({ ...s, settings }))}
                   restored={(s, p) => {
+                    setResourceRevision((revision) => revision + 1);
                     studioRef.current = s;
                     setStudio(s);
                     setProfiles(p);
                   }}
                   reset={() => {
+                    setResourceRevision((revision) => revision + 1);
                     const s = structuredClone(defaults);
                     studioRef.current = s;
                     setStudio(s);

@@ -103,6 +103,7 @@ function text(
   x: number,
   y: number,
   role: FontRole,
+  oblique = false,
 ) {
   if (activeFonts.roles.includes(role)) {
     const set = characterSets.get(role)!;
@@ -112,10 +113,31 @@ function text(
           `The Gotham ${role} font cannot render “${character}”. Select a Gotham font with Turkish character support in Brand style.`,
         );
   }
-  ctx.fillText(value, x, y);
+  if (oblique) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.transform(1, 0, -Math.tan((12 * Math.PI) / 180), 1, 0, 0);
+    ctx.fillText(value, 0, 0);
+    ctx.restore();
+  } else ctx.fillText(value, x, y);
 }
 function font(ctx: CanvasRenderingContext2D, role: FontRole, size: number) {
   ctx.font = `${activeFonts.roles.includes(role) ? "" : role === "italic" ? "italic 700 " : role === "black" || role === "bold" ? "700 " : ""}${size}px ${activeFonts.roles.includes(role) ? fontNames[role] : "Lato"}`;
+}
+function trainerFont(
+  ctx: CanvasRenderingContext2D,
+  name: string,
+  size: number,
+) {
+  const oblique =
+    activeFonts.roles.includes("italic") &&
+    [...name].some(
+      (character) =>
+        !characterSets.get("italic")!.has(character.codePointAt(0)!),
+    ) &&
+    activeFonts.roles.includes("bold");
+  font(ctx, oblique ? "bold" : "italic", size);
+  return oblique;
 }
 function splitTitle(
   ctx: CanvasRenderingContext2D,
@@ -197,15 +219,22 @@ function drawDay(
       text(ctx, line, x + 116, baseline + i * 18, "bold"),
     );
     let nameSize = 13.5;
-    font(ctx, "italic", nameSize);
     const name = `W/ ${trainerDisplay(session.trainer)}`;
+    const oblique = trainerFont(ctx, name, nameSize);
     while (ctx.measureText(name).width > w - 34 && nameSize > 11)
-      font(ctx, "italic", (nameSize -= 0.25));
+      trainerFont(ctx, name, (nameSize -= 0.25));
     if (ctx.measureText(name).width > w - 34)
       throw new Error(
         `Trainer name “${session.trainer}” is too long for this card. Use a shorter display name in Excel.`,
       );
-    text(ctx, name, x + 17, baseline + 18, "italic");
+    text(
+      ctx,
+      name,
+      x + 17,
+      baseline + 18,
+      oblique ? "bold" : "italic",
+      oblique,
+    );
     if (session.extra) {
       font(ctx, "regular", 9);
       const theme = session.extra.toUpperCase();
@@ -238,30 +267,40 @@ export async function renderUaSchedule(
   text(ctx, schedule.location, 793, 295, "black");
   ctx.textAlign = "left";
   const firstTop = schedule.location === "MASLAK" ? 394 : 486;
-  const lastTop = schedule.location === "MASLAK" ? 1137 : 1090;
   const first = schedule.days.filter((d) => d.day < 4),
     last = schedule.days.filter((d) => d.day >= 4);
-  const maxFirst = Math.max(1, ...first.map((d) => d.sessions.length));
-  const rowHeight = Math.min(
-    55,
-    Math.floor((lastTop - firstTop - 45 - 108) / maxFirst),
-  );
+  const rowGap = 40;
+  const tallest = (days: ClassDay[], size: number) =>
+    days.length ? Math.max(...days.map((day) => dayHeight(day, size))) : 0;
+  let rowHeight = 55;
+  while (
+    rowHeight >= 44 &&
+    firstTop +
+      tallest(first, rowHeight) +
+      (first.length && last.length ? rowGap : 0) +
+      tallest(last, rowHeight) >
+      1670
+  )
+    rowHeight--;
   if (rowHeight < 44)
     throw new Error(
       `${schedule.location} has too many classes for one readable image. Split the week across separate workbook exports.`,
     );
   for (const day of first)
     drawDay(ctx, day, 35 + day.day * 256.5, firstTop, rowHeight);
+  const lastTop = first.length
+    ? firstTop + tallest(first, rowHeight) + rowGap
+    : firstTop;
   for (const day of last) {
     const x =
       schedule.location === "LIVE" && last.length === 1
         ? 548
         : 35 + (day.day - 4) * 256.5;
-    if (lastTop + dayHeight(day, 55) > 1670)
+    if (lastTop + dayHeight(day, rowHeight) > 1670)
       throw new Error(
         `${schedule.location} ${day.label} has too many classes to fit above the logo.`,
       );
-    drawDay(ctx, day, x, lastTop, 55);
+    drawDay(ctx, day, x, lastTop, rowHeight);
   }
   const blob = await new Promise<Blob>((resolve, reject) =>
     canvas.toBlob(

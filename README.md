@@ -1,18 +1,18 @@
 # Mase — the private training studio
 
-A static, browser-local Excel-to-image application for Urban Active weekly schedules. Its main workflow is one workbook upload followed by automatically prepared, branded images for WhatsApp. Calendar, clients, and general document templates remain available as secondary studio tools.
+A static, browser-local Excel-to-image application for Urban Active weekly schedules. Its main workflow is one workbook upload followed by automatically prepared, branded images for WhatsApp. The header switches between **UA story** and **Studio tools**. UA story is the default, with secondary navigation hidden; Studio tools reveals Calendar, Clients, Documents, Templates, and Settings. Switching preserves the current UA upload and preview and returns to the last studio page.
 
 ## Primary workflow: UA weekly images
 
-1. Open **Weekly schedules** (the default screen).
+1. Open **UA story** (the default workspace).
 2. Upload the normal UA `.xlsx` workbook.
 3. MASLAK, GÖKTÜRK, and LIVE are extracted automatically. Preview each image or download the complete ZIP with the cover and three 1080 × 1920 PNGs.
 
 The importer discovers the `TRAINER` / `DERS` day blocks from their headers and preserves the workbook's cycle/studio grouping and row order. It reads actual Excel time cells, trainer names, themes, and LIVE durations. LIVE content comes from `UA+ FILM` (also accepts `UA+ LIVE` or `LIVE`), independent of the old image reference. Empty unassigned slots are omitted; incomplete assigned classes and unresolved formulas produce explicit errors. Missing location sheets are reported before downloading available outputs.
 
-The supplied blank UA artwork and cover are bundled after stripping Canva account/person metadata. No real workbook, populated example image, or trainer data is committed. Borders and separators are drawn at native size, with the original black panel translucency, and heights adapt to the class count. Excessive content or labels that cannot fit at readable sizes block generation instead of clipping.
+The supplied blank UA artwork and cover are bundled after stripping Canva account/person metadata. No real workbook, populated example image, or trainer data is committed. Borders and separators are drawn at native size, with the original black panel translucency, and heights adapt to the class count. The second row sits 40 pixels below the tallest first-row card, so a short LIVE week has no artificial gap before Friday. Excessive content or labels that cannot fit at readable sizes block generation instead of clipping.
 
-**Gotham:** `scripts/prepare-ua-assets.mjs` detects supplied Gotham Book/Regular, Bold, Black, and Bold Italic font files in `example/` and bundles those four roles. If font files are absent, the UI explicitly identifies temporary preview typography. **Brand style** supports one-time local font setup, stored in the browser; subsequent weeks require only the Excel upload. Exact Gotham rendering requires the actual font files. The image artwork, headline, and logo always use the supplied original graphics.
+**Gotham:** the supplied Book, Bold, Black, and Bold Italic fonts are bundled and cached for offline use. No font setup is needed. The supplied Bold Italic face lacks some Turkish glyphs; names requiring those glyphs use the complete Gotham Bold face with a 12-degree oblique, preserving the spelling. Other names use the original Bold Italic. **Included UA resources** provides the background, cover, and font files on demand. Its **Change brand fonts** control supports local overrides, stored in the browser. The image artwork, headline, and logo always use the supplied original graphics.
 
 Maintainers can run `node scripts/prepare-ua-assets.mjs` after updating approved blank artwork or Gotham files. Source references and real test outputs remain in ignored `example/` / `.local/` directories.
 
@@ -108,7 +108,7 @@ Fonts, icons, and PDF resources are already committed. `npm run assets` regenera
 
 Unit tests cover XLSX parsing, multiple sheets, cached formulas (including zero), empty cells, invalid files, required mappings, Turkish formatting, normalized coordinates, all quarter-turn PDF rotations, long Unicode text, overflow warnings, filename collisions, embedded PDF fonts, local persistence, template archives, and calendar export privacy.
 
-Production browser tests cover calendar creation/editing/cancellation/conflicts, reload persistence, Excel-to-calendar import, Excel-to-document ZIP generation, draggable image overlays and saved reuse, PNG/PDF integrity and dimensions, rotated multipage PDFs, backup restore, and responsive layouts in Chromium and WebKit. A pixel comparison checks that PDF title glyphs render as fully as the corresponding PNG. Chromium additionally tests offline relaunch and offline PNG/PDF generation with no external requests.
+Production browser tests cover calendar creation/editing/cancellation/conflicts, reload persistence, Excel-to-calendar import, Excel-to-document ZIP generation, draggable image overlays and saved reuse, PNG/PDF integrity and dimensions, rotated multipage PDFs, backup restore, and responsive layouts in Chromium and WebKit. UA checks cover bundled Gotham, Turkish trainer names, the hidden secondary navigation, switching without losing the preview, and actual PNG pixels verifying Friday wraps below the first row. A pixel comparison checks that PDF title glyphs render as fully as the corresponding PNG. Chromium additionally tests offline relaunch and offline PNG/PDF/UA ZIP generation with no external requests.
 
 WebKit testing on Windows exercises the Safari engine, not an actual macOS/iOS device. Actual Mac Safari installation and iOS share-sheet behavior should be checked on those devices.
 

@@ -10,4 +10,4 @@ Application dependencies are recorded in `package-lock.json`.
 
 The npm override upgrades ExcelJS's UUID dependency to a compatible patched CommonJS-capable version. The parser and export tests verify compatibility.
 
-UA blank artwork and cover are user-supplied brand assets, re-encoded without personal Canva metadata. Populated references and source schedules are not distributed. Gotham is a user-specified font family; only supplied font assets or locally selected font files are used. No commercial font is fetched from an external font service or download site.
+UA blank artwork and cover are user-supplied brand assets, re-encoded without personal Canva metadata. Populated references and source schedules are not distributed. Gotham Book, Bold, Black, and Bold Italic are user-supplied font assets bundled locally in `public/ua/`. No commercial font is fetched from an external font service or download site.

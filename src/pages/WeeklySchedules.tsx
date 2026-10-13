@@ -19,6 +19,7 @@ import {
   type UaFontStatus,
 } from "../lib/uaRenderer";
 import { download } from "../lib/documents";
+import { bundledGotham } from "../generated/uaFonts";
 
 const roles: [FontRole, string][] = [
   ["regular", "Gotham Book / Regular"],
@@ -26,7 +27,11 @@ const roles: [FontRole, string][] = [
   ["black", "Gotham Black"],
   ["italic", "Gotham Bold Italic"],
 ];
-export function WeeklySchedules() {
+export function WeeklySchedules({
+  resourceRevision = 0,
+}: {
+  resourceRevision?: number;
+}) {
   const uploadVersion = useRef(0);
   const [uploading, setUploading] = useState(false);
   const [imported, setImported] = useState<ScheduleImport>(),
@@ -47,7 +52,7 @@ export function WeeklySchedules() {
     loadUaFonts()
       .then(setFonts)
       .catch((e) => setError(`Brand fonts could not be loaded: ${e.message}`));
-  }, []);
+  }, [resourceRevision]);
   useEffect(() => {
     let live = true;
     const urls: string[] = [];
@@ -137,10 +142,6 @@ export function WeeklySchedules() {
             automatically.
           </p>
         </div>
-        <button className="button secondary" onClick={() => setStyleOpen(true)}>
-          <Palette size={16} />
-          Brand style
-        </button>
       </div>
       <div className="ua-workspace">
         <div className="ua-controls">
@@ -244,7 +245,7 @@ export function WeeklySchedules() {
                 {fonts.complete ? (
                   <>
                     <Check size={13} />
-                    Gotham typography ready
+                    UA artwork & Gotham included
                   </>
                 ) : (
                   <>
@@ -261,6 +262,42 @@ export function WeeklySchedules() {
               </div>
             )}
           </section>
+          <details className="control-card ua-resources">
+            <summary>Included UA resources</summary>
+            <p className="muted">
+              The story template, artwork, and fonts are ready. Each week only
+              needs your Excel.
+            </p>
+            <div className="ua-resource-links">
+              <a
+                href={`${import.meta.env.BASE_URL}ua/background.png`}
+                download="UA-Story-Background.png"
+              >
+                Blank story background <ArrowDownToLine size={13} />
+              </a>
+              <a
+                href={`${import.meta.env.BASE_URL}ua/cover.png`}
+                download="UA-Story-Cover.png"
+              >
+                Story cover <ArrowDownToLine size={13} />
+              </a>
+              {roles.map(
+                ([role, label]) =>
+                  bundledGotham[role] && (
+                    <a
+                      key={role}
+                      href={`${import.meta.env.BASE_URL}${bundledGotham[role]}`}
+                      download
+                    >
+                      {label} <ArrowDownToLine size={13} />
+                    </a>
+                  ),
+              )}
+            </div>
+            <button className="text-button" onClick={() => setStyleOpen(true)}>
+              Change brand fonts
+            </button>
+          </details>
           {error && <Notice error>{error}</Notice>}
         </div>
         <div className="ua-preview-panel">
@@ -354,7 +391,7 @@ export function WeeklySchedules() {
       {styleOpen && (
         <Modal
           title="Your UA brand style."
-          subtitle="The original artwork is ready. Add Gotham once to reproduce its typography."
+          subtitle="Gotham and the original artwork are included. You can replace a font here if your brand changes."
           close={() => setStyleOpen(false)}
         >
           <div className="ua-font-upload">

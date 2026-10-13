@@ -17,9 +17,10 @@ export default defineConfig({
         "fonts/*OFL.txt",
       ],
       manifest: {
-      name: "Mase — UA weekly schedules",
+        name: "Mase — UA weekly schedules",
         short_name: "Mase",
-      description: "Upload the UA weekly workbook and download branded schedule images, with private studio tools alongside.",
+        description:
+          "Upload the UA weekly workbook and download branded schedule images, with private studio tools alongside.",
         theme_color: "#354b3d",
         background_color: "#f7f6f2",
         display: "standalone",

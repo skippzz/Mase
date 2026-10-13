@@ -74,6 +74,20 @@ test.beforeAll(async () => {
     s.getCell("F4").numFmt = "hh:mm";
     s.getCell("G4").value = "ÖZGE";
     s.getCell("H4").value = "STRENGTH";
+    if (name === "UA+ FILM") {
+      s.getCell("V2").value = "CUMA";
+      s.getCell("V3").value = "TRAINER";
+      s.getCell("W3").value = "DERS";
+      s.getCell("X3").value = "SÜRE";
+      for (const [index, trainer] of ["ÇİĞDEM", "ŞULE", "İPEK"].entries()) {
+        const row = index + 4;
+        s.getCell(`U${row}`).value = (10 + index) / 24;
+        s.getCell(`U${row}`).numFmt = "hh:mm";
+        s.getCell(`V${row}`).value = trainer;
+        s.getCell(`W${row}`).value = "PILATES";
+        s.getCell(`X${row}`).value = 40;
+      }
+    }
   }
   await ua.xlsx.writeFile(`${fixtureDir}/ua-week.xlsx`);
   await sharp({
@@ -383,7 +397,7 @@ test("studio backup restores calendar and templates after clearing local data", 
     .getByRole("button", { name: "Delete all data", exact: true })
     .click();
   await expect(page.getByText("Sample studio ·")).not.toBeVisible();
-  await page.locator('input[type="file"]').setInputFiles(file!);
+  await page.getByLabel("Restore backup", { exact: true }).setInputFiles(file!);
   await expect(
     page
       .getByRole("dialog")
@@ -407,7 +421,7 @@ test("weekly grid source and solid panels generate a reusable class schedule ima
   await page
     .getByLabel("Drop your spreadsheet here")
     .setInputFiles(`${fixtureDir}/grid.xlsx`);
-  await expect(page.getByText('2 records detected')).toBeVisible();
+  await expect(page.getByText("2 records detected")).toBeVisible();
   await page
     .getByLabel("Use your own background")
     .setInputFiles(`${fixtureDir}/background.png`);
@@ -499,6 +513,11 @@ test("main UA workflow creates cover and all three schedules from one workbook, 
   await expect(
     page.getByRole("heading", { name: "Excel in. Schedules out." }),
   ).toBeVisible();
+  await expect(page.locator(".sidebar")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "UA story", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByText("UA artwork & Gotham included")).toBeVisible();
   await page
     .getByLabel("Drop the UA weekly workbook here")
     .setInputFiles(`${fixtureDir}/ua-week.xlsx`);
@@ -523,13 +542,68 @@ test("main UA workflow creates cover and all three schedules from one workbook, 
     expect([dimensions.width, dimensions.height]).toEqual([1080, 1920]);
     if (name === "MASLAK-Weekly-Schedule.png")
       await writeFile(`${info.outputDir}/ua-maslak.png`, bytes);
+    if (name === "LIVE-Weekly-Schedule.png") {
+      const { data, info: pixels } = await sharp(bytes)
+        .removeAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      const yellowEdge = (left: number, top: number, bottom: number) => {
+        for (let y = top; y < bottom; y++) {
+          let yellow = 0;
+          for (let x = left; x < left + 120; x++) {
+            const index = (y * pixels.width + x) * pixels.channels;
+            if (
+              data[index] === 215 &&
+              data[index + 1] === 223 &&
+              data[index + 2] === 32
+            )
+              yellow++;
+          }
+          if (yellow > 80) return y;
+        }
+        throw new Error("The day card outline could not be found.");
+      };
+      const firstRowBottom = yellowEdge(95, 620, 655);
+      const fridayTop = yellowEdge(610, 655, 950);
+      expect(fridayTop - firstRowBottom).toBeGreaterThan(30);
+      expect(fridayTop - firstRowBottom).toBeLessThan(50);
+      await writeFile(`${info.outputDir}/ua-live.png`, bytes);
+    }
   }
+  await page.getByRole("button", { name: "LIVE", exact: true }).click();
+  await page.getByRole("button", { name: "Studio tools", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Your week, in balance." }),
+  ).toBeVisible();
+  for (const label of [
+    "Calendar",
+    "Clients",
+    "Documents",
+    "Templates",
+    "Studio settings",
+  ])
+    await expect(
+      page.getByRole("button", { name: label, exact: true }),
+    ).toBeVisible();
+  await page.getByRole("button", { name: "Clients", exact: true }).click();
+  await page.getByRole("button", { name: "UA story", exact: true }).click();
+  await expect(page.getByAltText("LIVE weekly schedule preview")).toBeVisible();
+  await expect(page.locator(".sidebar")).toHaveCount(0);
+  await page.getByRole("button", { name: "Studio tools", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Clients", exact: true }),
+  ).toHaveClass(/active/);
+  await page.getByRole("button", { name: "UA story", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+  await page.screenshot({
+    path: `${info.outputDir}/ua-mobile.png`,
+    fullPage: true,
+  });
   if (browserName === "chromium") {
     await page.evaluate(async () => {
       await navigator.serviceWorker.ready;
