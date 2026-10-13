@@ -290,11 +290,12 @@ export default function App() {
           <div>
             {uaMode ? (
               <a
-                className="compact-brand"
+                className="ua-brand"
                 href="#weekly"
                 onClick={() => navigate("weekly")}
               >
-                mase<span>.</span>
+                <strong>URBAN ACTIVE</strong>
+                <small>WEEKLY STORIES</small>
               </a>
             ) : (
               <>
@@ -409,120 +410,122 @@ export default function App() {
             </div>
           ) : (
             <>
-              <div hidden={!uaMode}>
+              <div className="ua-page mode-content" hidden={!uaMode}>
                 <WeeklySchedules resourceRevision={resourceRevision} />
               </div>
-              {page === "calendar" && (
-                <Calendar
-                  studio={studio}
-                  start={start}
-                  setStart={setStart}
-                  edit={setAppointment}
-                  add={add}
-                  share={() => documents()}
-                  importExcel={() => setImporting(true)}
-                  demo={() => {
-                    commit((s) => {
-                      const sample = demonstration(start);
-                      return {
+              <div className="studio-page mode-content" hidden={uaMode}>
+                {page === "calendar" && (
+                  <Calendar
+                    studio={studio}
+                    start={start}
+                    setStart={setStart}
+                    edit={setAppointment}
+                    add={add}
+                    share={() => documents()}
+                    importExcel={() => setImporting(true)}
+                    demo={() => {
+                      commit((s) => {
+                        const sample = demonstration(start);
+                        return {
+                          ...s,
+                          clients: [...s.clients, ...sample.clients],
+                          appointments: [
+                            ...s.appointments,
+                            ...sample.appointments,
+                          ],
+                          settings: { ...s.settings, demo: true },
+                        };
+                      }).catch((e) => setError(e.message));
+                    }}
+                  />
+                )}
+                {page === "clients" && (
+                  <Clients
+                    studio={studio}
+                    save={async (c: Client) =>
+                      commit((s) => ({
                         ...s,
-                        clients: [...s.clients, ...sample.clients],
-                        appointments: [
-                          ...s.appointments,
-                          ...sample.appointments,
-                        ],
-                        settings: { ...s.settings, demo: true },
-                      };
-                    }).catch((e) => setError(e.message));
-                  }}
-                />
-              )}
-              {page === "clients" && (
-                <Clients
-                  studio={studio}
-                  save={async (c: Client) =>
-                    commit((s) => ({
-                      ...s,
-                      clients: s.clients.some((old) => old.id === c.id)
-                        ? s.clients.map((old) => (old.id === c.id ? c : old))
-                        : [...s.clients, c],
-                    }))
-                  }
-                  remove={async (id) =>
-                    commit((s) => ({
-                      ...s,
-                      clients: s.clients.filter((c) => c.id !== id),
-                      appointments: s.appointments.filter(
-                        (a) => a.clientId !== id,
-                      ),
-                    }))
-                  }
-                  session={(id) => add(undefined, undefined, id)}
-                  share={(id) => documents(id)}
-                />
-              )}
-              {page === "documents" && (
-                <Documents
-                  key={documentOptions.key}
-                  studio={studio}
-                  profiles={profiles}
-                  save={storeProfile}
-                  start={start}
-                  setStart={setStart}
-                  initialClient={documentOptions.client}
-                  initialMode={documentOptions.mode}
-                  initialProfile={documentOptions.profile}
-                />
-              )}
-              {page === "templates" && (
-                <Templates
-                  studio={studio}
-                  profiles={profiles}
-                  start={start}
-                  save={storeProfile}
-                  remove={async (id) => {
-                    await removeProfile(id);
-                    setProfiles((p) => p.filter((x) => x.id !== id));
-                  }}
-                  useTemplate={(id) => {
-                    const p = profiles.find((p) => p.id === id);
-                    documents(
-                      "",
-                      id,
-                      p?.fields.some(
-                        (f) =>
-                          f.source.kind === "cell" ||
-                          f.source.kind === "column" ||
-                          f.source.kind === "scheduleBlock",
-                      ) || p?.design === "session"
-                        ? "spreadsheet"
-                        : "calendar",
-                    );
-                  }}
-                />
-              )}
-              {page === "settings" && (
-                <Settings
-                  studio={studio}
-                  profiles={profiles}
-                  save={(settings) => commit((s) => ({ ...s, settings }))}
-                  restored={(s, p) => {
-                    setResourceRevision((revision) => revision + 1);
-                    studioRef.current = s;
-                    setStudio(s);
-                    setProfiles(p);
-                  }}
-                  reset={() => {
-                    setResourceRevision((revision) => revision + 1);
-                    const s = structuredClone(defaults);
-                    studioRef.current = s;
-                    setStudio(s);
-                    setProfiles(defaultProfiles());
-                  }}
-                  install={install}
-                  installAvailable={!!installPrompt}
-                />
-              )}
+                        clients: s.clients.some((old) => old.id === c.id)
+                          ? s.clients.map((old) => (old.id === c.id ? c : old))
+                          : [...s.clients, c],
+                      }))
+                    }
+                    remove={async (id) =>
+                      commit((s) => ({
+                        ...s,
+                        clients: s.clients.filter((c) => c.id !== id),
+                        appointments: s.appointments.filter(
+                          (a) => a.clientId !== id,
+                        ),
+                      }))
+                    }
+                    session={(id) => add(undefined, undefined, id)}
+                    share={(id) => documents(id)}
+                  />
+                )}
+                {page === "documents" && (
+                  <Documents
+                    key={documentOptions.key}
+                    studio={studio}
+                    profiles={profiles}
+                    save={storeProfile}
+                    start={start}
+                    setStart={setStart}
+                    initialClient={documentOptions.client}
+                    initialMode={documentOptions.mode}
+                    initialProfile={documentOptions.profile}
+                  />
+                )}
+                {page === "templates" && (
+                  <Templates
+                    studio={studio}
+                    profiles={profiles}
+                    start={start}
+                    save={storeProfile}
+                    remove={async (id) => {
+                      await removeProfile(id);
+                      setProfiles((p) => p.filter((x) => x.id !== id));
+                    }}
+                    useTemplate={(id) => {
+                      const p = profiles.find((p) => p.id === id);
+                      documents(
+                        "",
+                        id,
+                        p?.fields.some(
+                          (f) =>
+                            f.source.kind === "cell" ||
+                            f.source.kind === "column" ||
+                            f.source.kind === "scheduleBlock",
+                        ) || p?.design === "session"
+                          ? "spreadsheet"
+                          : "calendar",
+                      );
+                    }}
+                  />
+                )}
+                {page === "settings" && (
+                  <Settings
+                    studio={studio}
+                    profiles={profiles}
+                    save={(settings) => commit((s) => ({ ...s, settings }))}
+                    restored={(s, p) => {
+                      setResourceRevision((revision) => revision + 1);
+                      studioRef.current = s;
+                      setStudio(s);
+                      setProfiles(p);
+                    }}
+                    reset={() => {
+                      setResourceRevision((revision) => revision + 1);
+                      const s = structuredClone(defaults);
+                      studioRef.current = s;
+                      setStudio(s);
+                      setProfiles(defaultProfiles());
+                    }}
+                    install={install}
+                    installAvailable={!!installPrompt}
+                  />
+                )}
+              </div>
             </>
           )}
         </main>

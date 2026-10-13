@@ -8,6 +8,7 @@ import "@fontsource/cormorant-garamond/latin-400.css";
 import "@fontsource/cormorant-garamond/latin-500.css";
 import "@fontsource/cormorant-garamond/latin-ext-400.css";
 import "./styles.css";
+import "./ua-theme.css";
 import App from "./App";
 
 class ErrorBoundary extends React.Component<

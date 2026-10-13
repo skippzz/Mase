@@ -495,15 +495,22 @@ button {
 .ua-mode main {
   max-width: 1240px;
 }
-.compact-brand {
-  font-family: var(--serif);
-  font-size: 37px;
-  font-weight: 500;
-  letter-spacing: -1.5px;
+.ua-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #d7df20;
+}
+.ua-brand strong {
+  font-family: "UaBlack", "DM Sans", sans-serif;
+  font-size: 17px;
+  letter-spacing: -0.5px;
   line-height: 1;
 }
-.compact-brand span {
-  color: var(--terracotta);
+.ua-brand small {
+  font-size: 7px;
+  letter-spacing: 2.4px;
+  color: #a9b58d;
 }
 .workspace-switch {
   display: flex;

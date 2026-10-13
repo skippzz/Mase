@@ -1,6 +1,6 @@
 # Mase — the private training studio
 
-A static, browser-local Excel-to-image application for Urban Active weekly schedules. Its main workflow is one workbook upload followed by automatically prepared, branded images for WhatsApp. The header switches between **UA story** and **Studio tools**. UA story is the default, with secondary navigation hidden; Studio tools reveals Calendar, Clients, Documents, Templates, and Settings. Switching preserves the current UA upload and preview and returns to the last studio page.
+A static, browser-local Excel-to-image application for Urban Active weekly schedules. Its main workflow is one workbook upload followed by automatically prepared, branded images for WhatsApp. The header switches between **UA story** and **Studio tools**. UA story is the default, with the UA black/lime palette and Gotham typography; secondary navigation is hidden. Studio tools reveals Calendar, Clients, Documents, Templates, and Settings in the light studio interface, with a short fade/slide transition. Reduced-motion preferences disable animation. Switching preserves the current UA upload and preview and returns to the last studio page.
 
 ## Primary workflow: UA weekly images
 

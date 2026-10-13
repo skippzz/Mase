@@ -518,14 +518,12 @@ test("main UA workflow creates cover and all three schedules from one workbook, 
     page.getByRole("button", { name: "UA story", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText("UA artwork & Gotham included")).toBeVisible();
-  await page
-    .getByLabel("Drop the UA weekly workbook here")
-    .setInputFiles({
-      name: "UA_Weekly_Schedule_MASLAK, GÖKTÜRK & LIVE.xlsx",
-      mimeType:
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      buffer: await readFile(`${fixtureDir}/ua-week.xlsx`),
-    });
+  await page.getByLabel("Drop the UA weekly workbook here").setInputFiles({
+    name: "UA_Weekly_Schedule_MASLAK, GÖKTÜRK & LIVE.xlsx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    buffer: await readFile(`${fixtureDir}/ua-week.xlsx`),
+  });
   await expect(
     page.getByAltText("MASLAK weekly schedule preview"),
   ).toBeVisible();
@@ -576,10 +574,22 @@ test("main UA workflow creates cover and all three schedules from one workbook, 
     }
   }
   await page.getByRole("button", { name: "LIVE", exact: true }).click();
+  await expect(page.locator(".ua-page")).toHaveCSS("opacity", "1");
+  await page.screenshot({
+    path: `${info.outputDir}/ua-desktop.png`,
+    fullPage: true,
+    animations: "disabled",
+  });
   await page.getByRole("button", { name: "Studio tools", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Your week, in balance." }),
   ).toBeVisible();
+  await expect(page.locator(".studio-page")).toHaveCSS("opacity", "1");
+  await page.screenshot({
+    path: `${info.outputDir}/studio-revealed.png`,
+    fullPage: true,
+    animations: "disabled",
+  });
   for (const label of [
     "Calendar",
     "Clients",
@@ -599,6 +609,9 @@ test("main UA workflow creates cover and all three schedules from one workbook, 
     page.getByRole("button", { name: "Clients", exact: true }),
   ).toHaveClass(/active/);
   await page.getByRole("button", { name: "UA story", exact: true }).click();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(page.locator(".ua-page")).toHaveCSS("animation-name", "none");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
     await page.evaluate(
@@ -608,6 +621,7 @@ test("main UA workflow creates cover and all three schedules from one workbook, 
   await page.screenshot({
     path: `${info.outputDir}/ua-mobile.png`,
     fullPage: true,
+    animations: "disabled",
   });
   if (browserName === "chromium") {
     await page.evaluate(async () => {
@@ -615,14 +629,12 @@ test("main UA workflow creates cover and all three schedules from one workbook, 
     });
     await context.setOffline(true);
     await page.reload();
-    await page
-      .getByLabel("Drop the UA weekly workbook here")
-      .setInputFiles({
-        name: "UA_Weekly_Schedule_MASLAK, GÖKTÜRK & LIVE.xlsx",
-        mimeType:
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        buffer: await readFile(`${fixtureDir}/ua-week.xlsx`),
-      });
+    await page.getByLabel("Drop the UA weekly workbook here").setInputFiles({
+      name: "UA_Weekly_Schedule_MASLAK, GÖKTÜRK & LIVE.xlsx",
+      mimeType:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      buffer: await readFile(`${fixtureDir}/ua-week.xlsx`),
+    });
     await expect(
       page.getByAltText("MASLAK weekly schedule preview"),
     ).toBeVisible();
