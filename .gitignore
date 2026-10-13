@@ -4,6 +4,7 @@ dist/
 test-results/
 playwright-report/
 .local/
+example/
 *.log
 .env*
 !.env.example

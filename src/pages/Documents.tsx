@@ -80,6 +80,23 @@ export function Documents({
     filename: string;
   }>();
   const profile = profiles.find((p) => p.id === selectedId);
+  const supportsBatch = !!profile?.fields.some(
+    (f) => f.source.kind === "column",
+  );
+  useEffect(() => {
+    if (!supportsBatch) setBatch(false);
+  }, [supportsBatch]);
+  useEffect(() => {
+    const source = profile?.fields.find((f) => "sheet" in f.source)?.source;
+    if (
+      source &&
+      "sheet" in source &&
+      workbook?.sheets.some((s) => s.name === source.sheet)
+    ) {
+      setSheetName(source.sheet);
+      setRecordIndex(0);
+    }
+  }, [profile?.id, workbook]);
   const sheet = workbook?.sheets.find((s) => s.name === sheetName);
   const table = useMemo(
     () => (sheet ? tableData(sheet, headerRow) : { columns: [], records: [] }),
@@ -556,7 +573,7 @@ export function Documents({
                 PDF document
               </button>
             </div>
-            {mode === "spreadsheet" && (
+            {mode === "spreadsheet" && supportsBatch && (
               <label className="checkbox-label">
                 <input
                   type="checkbox"

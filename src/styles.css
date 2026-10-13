@@ -13,6 +13,233 @@
   --surface: #fdfdfb;
   --serif: "Cormorant Garamond", Georgia, serif;
 }
+.ua-workspace {
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+.ua-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.ua-location-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 3px;
+}
+.ua-location-list > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 10px;
+}
+.ua-location-list > div:last-child {
+  border-bottom: 0;
+}
+.ua-location-list strong {
+  font-size: 11px;
+  font-weight: 500;
+  flex: 1;
+}
+.ua-location-list > div > span:nth-child(3) {
+  color: #909b83;
+  font-size: 9px;
+}
+.ua-location-list svg {
+  color: #829e6d;
+}
+.ua-location-dot {
+  width: 5px;
+  height: 5px;
+  background: #c6ceb9;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.ua-location-dot.ready {
+  background: #839c6a;
+}
+.ua-preview-panel {
+  border: 1px solid #d9dfd0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #e9ece3;
+}
+.ua-preview-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px;
+  background: #fafbf6;
+  border-bottom: 1px solid var(--border);
+}
+.ua-preview-tabs button {
+  padding: 9px 17px;
+  border-radius: 5px;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  color: #8d9b7f;
+}
+.ua-preview-tabs button.active {
+  background: #e8efdf;
+  color: #4c683c;
+}
+.ua-preview-tabs > span {
+  font-size: 8px;
+  letter-spacing: 1.6px;
+  color: #859775;
+}
+.ua-preview-stage {
+  padding: 28px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background: radial-gradient(#929f7d14 0.6px, transparent 0.6px);
+  background-size: 9px 9px;
+}
+.ua-preview-stage > img {
+  width: 100%;
+  max-width: 460px;
+  box-shadow: 0 4px 20px #26352222;
+  display: block;
+}
+.ua-preview-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 17px 20px;
+  background: #fafbf6;
+  border-top: 1px solid var(--border);
+}
+.ua-preview-bottom > span {
+  font-size: 10px;
+  color: #91a17e;
+}
+.ua-preview-bottom .button {
+  font-size: 10px;
+}
+.ua-empty-preview {
+  padding: 28px;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 20px;
+}
+.ua-empty-preview > img {
+  width: 100%;
+  max-width: 360px;
+  box-shadow: 0 4px 20px #26352222;
+}
+.ua-empty-preview > div {
+  text-align: center;
+}
+.ua-empty-preview strong {
+  display: block;
+  font-family: var(--serif);
+  font-size: 25px;
+  font-weight: 400;
+  margin-bottom: 7px;
+}
+.ua-empty-preview span {
+  font-size: 10px;
+  color: #919d84;
+}
+.ua-font-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 8px;
+  color: #a57e52;
+  border-top: 1px solid var(--border);
+  padding-top: 15px;
+  margin-top: 17px;
+  flex-wrap: wrap;
+}
+.ua-font-status.complete {
+  color: #859c70;
+}
+.ua-font-status .text-button {
+  font-size: 9px;
+  margin-left: auto;
+}
+.ua-font-upload input {
+  font-size: 10px;
+  padding: 8px 10px;
+}
+.ua-font-upload small {
+  font-size: 9px;
+  line-height: 1.5;
+  color: #8c9b7c;
+}
+@media (max-width: 1100px) {
+  .ua-workspace {
+    grid-template-columns: 300px minmax(0, 1fr);
+    gap: 20px;
+  }
+  .ua-preview-stage {
+    padding: 20px;
+  }
+  .ua-location-list strong {
+    font-size: 10px;
+  }
+  .ua-location-list > div > span:nth-child(3) {
+    font-size: 8px;
+  }
+}
+@media (max-width: 900px) {
+  .ua-workspace {
+    grid-template-columns: 1fr;
+  }
+  .ua-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+  .ua-controls > .control-card:last-of-type {
+    grid-column: 1/-1;
+  }
+  .ua-preview-stage > img {
+    max-width: 460px;
+  }
+}
+@media (max-width: 720px) {
+  .ua-controls {
+    display: flex;
+  }
+  .ua-preview-stage,
+  .ua-empty-preview {
+    padding: 20px;
+  }
+  .ua-preview-tabs {
+    gap: 5px;
+    padding: 12px;
+  }
+  .ua-preview-tabs button {
+    padding: 8px 14px;
+    font-size: 9px;
+  }
+  .ua-preview-bottom {
+    padding: 15px;
+  }
+  .ua-preview-bottom > span {
+    font-size: 8px;
+  }
+  .ua-preview-bottom .button {
+    font-size: 9px;
+  }
+  .ua-workspace {
+    gap: 20px;
+  }
+  .ua-font-status {
+    font-size: 9px;
+  }
+}
 * {
   box-sizing: border-box;
 }

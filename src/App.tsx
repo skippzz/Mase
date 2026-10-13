@@ -36,25 +36,33 @@ import { Settings } from "./pages/Settings";
 import { AppointmentModal } from "./components/AppointmentModal";
 import { CalendarImport } from "./components/CalendarImport";
 import { Notice } from "./components/ui";
+import { WeeklySchedules } from "./pages/WeeklySchedules";
 
-type Page = "calendar" | "clients" | "documents" | "templates" | "settings";
+type Page =
+  "weekly" | "calendar" | "clients" | "documents" | "templates" | "settings";
 interface InstallPrompt extends Event {
   prompt(): Promise<void>;
   userChoice: Promise<{ outcome: string }>;
 }
 const navigation = [
-  { id: "calendar", label: "Schedule", icon: CalendarDays },
+  { id: "weekly", label: "Weekly schedules", icon: Files },
+  { id: "calendar", label: "Calendar", icon: CalendarDays },
   { id: "clients", label: "Clients", icon: Users },
   { id: "documents", label: "Documents", icon: Files },
   { id: "templates", label: "Templates", icon: LayoutTemplate },
 ] as const;
 function currentPage(): Page {
   const hash = location.hash.slice(1);
-  return ["calendar", "clients", "documents", "templates", "settings"].includes(
-    hash,
-  )
+  return [
+    "weekly",
+    "calendar",
+    "clients",
+    "documents",
+    "templates",
+    "settings",
+  ].includes(hash)
     ? (hash as Page)
-    : "calendar";
+    : "weekly";
 }
 export default function App() {
   const [studio, setStudio] = useState<StudioState>(structuredClone(defaults)),
@@ -184,8 +192,8 @@ export default function App() {
       <aside className={`sidebar ${mobileMenu ? "open" : ""}`}>
         <a
           className="brand"
-          href="#calendar"
-          onClick={() => navigate("calendar")}
+          href="#weekly"
+          onClick={() => navigate("weekly")}
         >
           <span>
             mase<span className="brand-dot">.</span>
@@ -362,6 +370,7 @@ export default function App() {
             </div>
           ) : (
             <>
+              {page === "weekly" && <WeeklySchedules />}
               {page === "calendar" && (
                 <Calendar
                   studio={studio}
@@ -442,7 +451,8 @@ export default function App() {
                       p?.fields.some(
                         (f) =>
                           f.source.kind === "cell" ||
-                          f.source.kind === "column",
+                          f.source.kind === "column" ||
+                          f.source.kind === "scheduleBlock",
                       ) || p?.design === "session"
                         ? "spreadsheet"
                         : "calendar",

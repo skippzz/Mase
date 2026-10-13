@@ -59,6 +59,18 @@ export interface SheetRecord {
 export type FieldSource =
   | { kind: "column"; sheet: string; column: string }
   | { kind: "cell"; sheet: string; address: string }
+  | {
+      kind: "scheduleBlock";
+      sheet: string;
+      firstRow: number;
+      lastRow: number;
+      timeColumn: string;
+      titleColumn: string;
+      trainerColumn: string;
+      extraColumn: string;
+      extraFormat: "text" | "minutes";
+      skipRows: number[];
+    }
   | { kind: "text"; text: string }
   | {
       kind: "calendar";
@@ -76,6 +88,7 @@ export interface TemplateField {
   fontSize: number;
   fontFamily: "Lato" | "Serif";
   color: string;
+  background?: string;
   align: "left" | "center" | "right";
   required: boolean;
   format: "text" | "date" | "number" | "currency" | "time";

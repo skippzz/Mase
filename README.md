@@ -1,10 +1,24 @@
 # Mase — the private training studio
 
-A static, browser-local scheduling application with an understated ivory, sage, and terracotta interface. Built for a personal trainer who wants a calm calendar and beautiful schedule images for WhatsApp.
+A static, browser-local Excel-to-image application for Urban Active weekly schedules. Its main workflow is one workbook upload followed by automatically prepared, branded images for WhatsApp. Calendar, clients, and general document templates remain available as secondary studio tools.
+
+## Primary workflow: UA weekly images
+
+1. Open **Weekly schedules** (the default screen).
+2. Upload the normal UA `.xlsx` workbook.
+3. MASLAK, GÖKTÜRK, and LIVE are extracted automatically. Preview each image or download the complete ZIP with the cover and three 1080 × 1920 PNGs.
+
+The importer discovers the `TRAINER` / `DERS` day blocks from their headers and preserves the workbook's cycle/studio grouping and row order. It reads actual Excel time cells, trainer names, themes, and LIVE durations. LIVE content comes from `UA+ FILM` (also accepts `UA+ LIVE` or `LIVE`), independent of the old image reference. Empty unassigned slots are omitted; incomplete assigned classes and unresolved formulas produce explicit errors. Missing location sheets are reported before downloading available outputs.
+
+The supplied blank UA artwork and cover are bundled after stripping Canva account/person metadata. No real workbook, populated example image, or trainer data is committed. Borders and separators are drawn at native size, with the original black panel translucency, and heights adapt to the class count. Excessive content or labels that cannot fit at readable sizes block generation instead of clipping.
+
+**Gotham:** `scripts/prepare-ua-assets.mjs` detects supplied Gotham Book/Regular, Bold, Black, and Bold Italic font files in `example/` and bundles those four roles. If font files are absent, the UI explicitly identifies temporary preview typography. **Brand style** supports one-time local font setup, stored in the browser; subsequent weeks require only the Excel upload. Exact Gotham rendering requires the actual font files. The image artwork, headline, and logo always use the supplied original graphics.
+
+Maintainers can run `node scripts/prepare-ua-assets.mjs` after updating approved blank artwork or Gotham files. Source references and real test outputs remain in ignored `example/` / `.local/` directories.
 
 ## Daily use
 
-1. Open **Schedule**. Add a session, choose an existing client or create one, and enter its date, time, movement, and location. Overlapping active sessions are blocked. Click a session to edit, cancel, or delete it.
+1. Open **Calendar**. Add a session, choose an existing client or create one, and enter its date, time, movement, and location. Overlapping active sessions are blocked. Click a session to edit, cancel, or delete it.
 2. To bring in an existing plan, click **Import Excel**, upload an `.xlsx` file, and select the columns for client, date, and time. Optionally map duration (minutes), movement, and location. Review the actual rows before importing. Invalid or conflicting rows are identified by their original spreadsheet row number; no rows are silently skipped.
 3. Click **Share schedule** to open Documents. Choose a day or the whole week, and the full studio schedule or one client.
 4. Choose **The weekly edit** for the included design, or upload your own PNG/JPEG/PDF background. **Customize** lets you drag text onto the background, edit its position and dimensions precisely, choose its source, style it, and save the layout for reuse. Arrow keys fine-tune placement; Shift + arrow moves in larger increments.
@@ -17,6 +31,10 @@ The first launch contains no client data. **Explore a sample week** adds clearly
 ## Excel → documents
 
 In Documents, choose **Excel**, upload a workbook, choose its worksheet and header row, and select a saved template. The included **Client session brief · example** is a configurable demonstration, not an assumed production spreadsheet format.
+
+For weekly class grids, choose **Spreadsheet schedule block** as a text field's source. Set the worksheet, first/last rows, and the time, class, trainer, and optional theme/duration columns for one day. Empty class slots are skipped automatically; heading rows can be excluded explicitly. Source order is preserved, and missing times, trainers, or formula results are reported. This works with several days arranged side by side in a worksheet.
+
+An optional **solid text panel background** covers an old schedule area before drawing its replacement. This is available in Customize; it does not alter the original image. Use transparent panels with blank backgrounds, or a chosen solid color with populated images. Real files under `example/` are ignored by Git and never deployed.
 
 **Match column names** links only exact, case-insensitive matches between field names and the selected header row. Review all fields in Customize. Each field may read from a spreadsheet column, an explicit worksheet cell such as `B4`, fixed text, or a calendar detail. Source data and template definitions are separate, so a saved layout can be reused with new workbooks.
 

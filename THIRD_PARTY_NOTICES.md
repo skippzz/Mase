@@ -9,3 +9,5 @@ Application dependencies are recorded in `package-lock.json`.
 - DM Sans and Cormorant Garamond webfonts are bundled locally through Fontsource; the respective OFL license files are included in those npm packages. No font is requested from a third-party server when using the app.
 
 The npm override upgrades ExcelJS's UUID dependency to a compatible patched CommonJS-capable version. The parser and export tests verify compatibility.
+
+UA blank artwork and cover are user-supplied brand assets, re-encoded without personal Canva metadata. Populated references and source schedules are not distributed. Gotham is a user-specified font family; only supplied font assets or locally selected font files are used. No commercial font is fetched from an external font service or download site.

@@ -291,6 +291,10 @@ export async function generateImage(
     (f) => f.field.page === pageIndex,
   )) {
     const box = fieldBox(field, canvas.width, canvas.height);
+    if (field.background) {
+      ctx.fillStyle = field.background;
+      ctx.fillRect(box.x, box.top, box.width, box.height);
+    }
     const family = field.fontFamily === "Serif" ? "CormorantPdf" : "Lato";
     const measure = (s: string, size: number) => {
       ctx.font = `${size}px ${family}`;
@@ -416,6 +420,18 @@ export async function generatePdf(
     )) {
       const box = fieldBox(field, width, height),
         font = field.fontFamily === "Serif" ? serif : sans;
+      if (field.background) {
+        const background = field.background
+          .match(/[a-f\d]{2}/gi)!
+          .map((n) => parseInt(n, 16) / 255);
+        page.drawRectangle({
+          x: box.x,
+          y: height - box.top - box.height,
+          width: box.width,
+          height: box.height,
+          color: rgb(background[0], background[1], background[2]),
+        });
+      }
       let layout;
       try {
         const characters = new Set(font.getCharacterSet());

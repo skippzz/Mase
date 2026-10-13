@@ -179,9 +179,31 @@ export function validateProfile(value: unknown): TemplateProfile {
     const source = f.source;
     if (
       !source ||
-      !["column", "cell", "text", "calendar"].includes(source.kind)
+      !["column", "cell", "text", "calendar", "scheduleBlock"].includes(
+        source.kind,
+      )
     )
       throw new Error("Invalid field source.");
+    if (f.background && !/^#[0-9a-f]{6}$/i.test(f.background))
+      throw new Error("Invalid text background color.");
+    if (source.kind === "scheduleBlock") {
+      if (
+        typeof source.sheet !== "string" ||
+        !Number.isInteger(source.firstRow) ||
+        !Number.isInteger(source.lastRow) ||
+        source.firstRow < 1 ||
+        source.lastRow < source.firstRow ||
+        source.lastRow > 5000 ||
+        !/^[a-z]{1,3}$/i.test(source.timeColumn) ||
+        !/^[a-z]{1,3}$/i.test(source.titleColumn) ||
+        !/^(?:[a-z]{1,3})?$/i.test(source.trainerColumn) ||
+        !/^(?:[a-z]{1,3})?$/i.test(source.extraColumn) ||
+        !["text", "minutes"].includes(source.extraFormat) ||
+        !Array.isArray(source.skipRows) ||
+        source.skipRows.some((r) => !Number.isInteger(r) || r < 1 || r > 5000)
+      )
+        throw new Error("Invalid spreadsheet schedule block.");
+    }
     if (source.kind === "text" && typeof source.text !== "string")
       throw new Error("Invalid fixed text.");
     if (
@@ -223,12 +245,30 @@ export async function exportArchive(
     "templates.json",
     JSON.stringify({ version: 1, profiles: metadata }, null, 2),
   );
-  if (state) zip.file("studio.json", JSON.stringify(state, null, 2));
+  if (state) {
+    zip.file("studio.json", JSON.stringify(state, null, 2));
+    const db = await database();
+    const fonts = (await db.get("data", "ua-fonts")) as
+      Record<string, ArrayBuffer> | undefined;
+    if (fonts) {
+      const roles: string[] = [];
+      for (const role of ["regular", "bold", "black", "italic"])
+        if (fonts[role]) {
+          roles.push(role);
+          zip.file(`ua-fonts/${role}.bin`, fonts[role]);
+        }
+      zip.file("ua-fonts.json", JSON.stringify({ version: 1, roles }));
+    }
+  }
   return zip.generateAsync({ type: "blob", compression: "DEFLATE" });
 }
 export async function importArchive(
   file: File,
-): Promise<{ state?: StudioState; profiles: TemplateProfile[] }> {
+): Promise<{
+  state?: StudioState;
+  profiles: TemplateProfile[];
+  fonts?: Partial<Record<"regular" | "bold" | "black" | "italic", ArrayBuffer>>;
+}> {
   checkFile(file, "Backup");
   const zip = await guardZip(await file.arrayBuffer());
   const raw = zip.file("templates.json");
@@ -258,8 +298,33 @@ export async function importArchive(
     profiles.push(validateProfile(profile));
   }
   const stateFile = zip.file("studio.json");
+  let fonts:
+    | Partial<Record<"regular" | "bold" | "black" | "italic", ArrayBuffer>>
+    | undefined;
+  const fontMetadata = zip.file("ua-fonts.json");
+  if (fontMetadata) {
+    const info = JSON.parse(await fontMetadata.async("string"));
+    if (
+      info.version !== 1 ||
+      !Array.isArray(info.roles) ||
+      info.roles.some(
+        (r: string) => !["regular", "bold", "black", "italic"].includes(r),
+      )
+    )
+      throw new Error("Invalid brand font metadata.");
+    fonts = {};
+    for (const role of info.roles as (
+      "regular" | "bold" | "black" | "italic"
+    )[]) {
+      const file = zip.file(`ua-fonts/${role}.bin`);
+      if (!file)
+        throw new Error("A saved brand font is missing from the backup.");
+      fonts[role] = await file.async("arraybuffer");
+    }
+  }
   return {
     profiles,
+    fonts,
     state: stateFile
       ? validateState(JSON.parse(await stateFile.async("string")))
       : undefined,
@@ -268,6 +333,7 @@ export async function importArchive(
 export async function replaceAll(
   state: StudioState,
   profiles: TemplateProfile[],
+  fonts?: Partial<Record<"regular" | "bold" | "black" | "italic", ArrayBuffer>>,
 ) {
   const encoded = await Promise.all(profiles.map(encodeProfile));
   const db = await database();
@@ -275,6 +341,8 @@ export async function replaceAll(
   await tx.objectStore("templates").clear();
   await tx.objectStore("data").put(state, "studio");
   await tx.objectStore("data").put(true, "templates-initialized");
+  await tx.objectStore("data").delete("ua-fonts");
+  if (fonts) await tx.objectStore("data").put(fonts, "ua-fonts");
   for (const p of encoded) await tx.objectStore("templates").put(p);
   await tx.done;
 }

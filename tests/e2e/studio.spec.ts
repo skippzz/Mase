@@ -39,6 +39,43 @@ test.beforeAll(async () => {
     "Gentle movement",
   ]);
   await workbook.xlsx.writeFile(`${fixtureDir}/sessions.xlsx`);
+  const grid = new ExcelJS.Workbook(),
+    gridSheet = grid.addWorksheet("Grid");
+  gridSheet.getCell("A5").value = 0.375;
+  gridSheet.getCell("A5").numFmt = "hh:mm";
+  gridSheet.getCell("B5").value = "İpek";
+  gridSheet.getCell("C5").value = "CYCLE";
+  gridSheet.getCell("D5").value = "EXPRESS";
+  gridSheet.getCell("A6").value = 0.5;
+  gridSheet.getCell("A6").numFmt = "hh:mm";
+  gridSheet.getCell("B6").value = "Özge";
+  gridSheet.getCell("C6").value = "PILATES";
+  await grid.xlsx.writeFile(`${fixtureDir}/grid.xlsx`);
+  const ua = new ExcelJS.Workbook();
+  for (const name of ["MASLAK", "GÖKTÜRK", "UA+ FILM"]) {
+    const s = ua.addWorksheet(name);
+    s.getCell("B2").value = "PAZARTESİ";
+    s.getCell("G2").value = "SALI";
+    for (const [col, header] of [
+      ["B", "TRAINER"],
+      ["C", "DERS"],
+      ["D", name === "UA+ FILM" ? "SÜRE" : "THEME"],
+      ["G", "TRAINER"],
+      ["H", "DERS"],
+      ["I", name === "UA+ FILM" ? "SÜRE" : "THEME"],
+    ])
+      s.getCell(`${col}3`).value = header;
+    s.getCell("A4").value = 0.375;
+    s.getCell("A4").numFmt = "hh:mm";
+    s.getCell("B4").value = "İPEK";
+    s.getCell("C4").value = "PILATES";
+    s.getCell("D4").value = name === "UA+ FILM" ? 40 : "EXPRESS";
+    s.getCell("F4").value = 0.5;
+    s.getCell("F4").numFmt = "hh:mm";
+    s.getCell("G4").value = "ÖZGE";
+    s.getCell("H4").value = "STRENGTH";
+  }
+  await ua.xlsx.writeFile(`${fixtureDir}/ua-week.xlsx`);
   await sharp({
     create: { width: 1080, height: 1350, channels: 4, background: "#f5e4d7" },
   })
@@ -59,7 +96,7 @@ test.beforeAll(async () => {
   await writeFile(`${fixtureDir}/rotated.pdf`, await doc.save());
 });
 async function open(page: Page) {
-  await page.goto("./");
+  await page.goto("./#calendar");
   await expect(
     page.getByRole("heading", { name: "Your week, in balance." }),
   ).toBeVisible();
@@ -356,11 +393,62 @@ test("studio backup restores calendar and templates after clearing local data", 
     .getByRole("dialog")
     .getByRole("button", { name: "Restore backup", exact: true })
     .click();
-  await page.getByRole("button", { name: "Schedule", exact: true }).click();
+  await page.getByRole("button", { name: "Calendar", exact: true }).click();
   await expect(
     page.getByRole("button", { name: /Ada \(sample\), Pilates/ }).first(),
   ).toBeVisible();
 });
+test("weekly grid source and solid panels generate a reusable class schedule image", async ({
+  page,
+}, info) => {
+  await open(page);
+  await page.getByRole("button", { name: "Documents", exact: true }).click();
+  await page.getByRole("button", { name: "Excel", exact: true }).click();
+  await page
+    .getByLabel("Drop your spreadsheet here")
+    .setInputFiles(`${fixtureDir}/grid.xlsx`);
+  await expect(page.getByText('2 records detected')).toBeVisible();
+  await page
+    .getByLabel("Use your own background")
+    .setInputFiles(`${fixtureDir}/background.png`);
+  const modal = page.getByRole("dialog");
+  await modal.getByRole("button", { name: "Add text", exact: true }).click();
+  await modal.getByLabel("Template name").fill("Class grid card");
+  await modal.getByLabel("Text from").selectOption("scheduleBlock");
+  await modal.getByLabel("Last row", { exact: true }).fill("6");
+  await modal.getByLabel("Height %", { exact: true }).fill("40");
+  await modal.getByLabel("Text panel background").selectOption("solid");
+  await modal.getByLabel("Text color", { exact: true }).fill("#ffffff");
+  await expect(
+    modal.getByRole("button", { name: "Position Field 1" }),
+  ).toContainText("09:00  CYCLE");
+  await modal
+    .getByRole("button", { name: "Save template", exact: true })
+    .click();
+  await page.getByRole("button", { name: "PNG image", exact: true }).click();
+  await expect(page.getByAltText("Generated document preview")).toBeVisible();
+  const result = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download schedule image" }).click();
+  const output = await result;
+  const bytes = await readFile((await output.path())!);
+  const pixel = await sharp(bytes)
+    .extract({ left: 110, top: 407, width: 1, height: 1 })
+    .removeAlpha()
+    .raw()
+    .toBuffer();
+  expect([...pixel]).toEqual([0, 0, 0]);
+  await output.saveAs(`${info.outputDir}/grid-panel.png`);
+  await page.reload();
+  await page
+    .getByLabel("Saved template")
+    .selectOption({ label: "Class grid card" });
+  await page.getByRole("button", { name: "Excel", exact: true }).click();
+  await page
+    .getByLabel("Drop your spreadsheet here")
+    .setInputFiles(`${fixtureDir}/grid.xlsx`);
+  await expect(page.getByAltText("Generated document preview")).toBeVisible();
+});
+
 test("production PWA relaunches and generates PNG and PDF entirely offline", async ({
   page,
   context,
@@ -400,4 +488,62 @@ test("production PWA relaunches and generates PNG and PDF entirely offline", asy
   await page.getByRole("button", { name: "Download PDF", exact: true }).click();
   expect((await pdfResult).suggestedFilename()).toMatch(/\.pdf$/);
   expect(external).toEqual([]);
+});
+
+test("main UA workflow creates cover and all three schedules from one workbook, online and offline", async ({
+  page,
+  context,
+  browserName,
+}, info) => {
+  await page.goto("./");
+  await expect(
+    page.getByRole("heading", { name: "Excel in. Schedules out." }),
+  ).toBeVisible();
+  await page
+    .getByLabel("Drop the UA weekly workbook here")
+    .setInputFiles(`${fixtureDir}/ua-week.xlsx`);
+  await expect(
+    page.getByAltText("MASLAK weekly schedule preview"),
+  ).toBeVisible();
+  const result = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download all images" }).click();
+  const output = await result;
+  const JSZip = (await import("jszip")).default;
+  const zip = await JSZip.loadAsync(await readFile((await output.path())!));
+  await mkdir(info.outputDir, { recursive: true });
+  expect(Object.keys(zip.files)).toEqual([
+    "MASLAK-Weekly-Schedule.png",
+    "GÖKTÜRK-Weekly-Schedule.png",
+    "LIVE-Weekly-Schedule.png",
+    "01-Cover.png",
+  ]);
+  for (const [name, file] of Object.entries(zip.files)) {
+    const bytes = await file.async("nodebuffer");
+    const dimensions = await sharp(bytes).metadata();
+    expect([dimensions.width, dimensions.height]).toEqual([1080, 1920]);
+    if (name === "MASLAK-Weekly-Schedule.png")
+      await writeFile(`${info.outputDir}/ua-maslak.png`, bytes);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  if (browserName === "chromium") {
+    await page.evaluate(async () => {
+      await navigator.serviceWorker.ready;
+    });
+    await context.setOffline(true);
+    await page.reload();
+    await page
+      .getByLabel("Drop the UA weekly workbook here")
+      .setInputFiles(`${fixtureDir}/ua-week.xlsx`);
+    await expect(
+      page.getByAltText("MASLAK weekly schedule preview"),
+    ).toBeVisible();
+    const offline = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Download all images" }).click();
+    expect((await offline).suggestedFilename()).toBe("UA-Weekly-Schedules.zip");
+  }
 });

@@ -53,6 +53,60 @@ export function resolveField(
 ): string {
   const source = field.source;
   let cell: SheetCell | undefined;
+  if (source.kind === "scheduleBlock") {
+    const sheet = context.workbook?.sheets.find((s) => s.name === source.sheet);
+    if (!sheet)
+      throw new Error(
+        `“${field.label}”: worksheet “${source.sheet}” is missing. Upload the matching workbook.`,
+      );
+    const blocks: string[] = [];
+    const read = (column: string, row: number) => {
+      if (!column) return undefined;
+      const cell = sheet.cells[`${column.toUpperCase()}${row}`];
+      if (cell?.error)
+        throw new Error(
+          `“${field.label}”, ${source.sheet}!${column}${row}: ${cell.error}`,
+        );
+      return cell?.value;
+    };
+    for (let row = source.firstRow; row <= source.lastRow; row++) {
+      if (source.skipRows.includes(row)) {
+        if (blocks.length) blocks.push("");
+        continue;
+      }
+      const title = read(source.titleColumn, row);
+      if (title == null || String(title).trim() === "") continue;
+      const time = read(source.timeColumn, row),
+        trainer = read(source.trainerColumn, row),
+        extra = read(source.extraColumn, row);
+      const clock =
+        time == null
+          ? ""
+          : formatValue(time, { ...field, format: "time" }, context.locale);
+      if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(clock))
+        throw new Error(
+          `“${field.label}”, row ${row}: class time must be an Excel time or HH:MM. Skip heading rows in the field settings.`,
+        );
+      if (
+        source.trainerColumn &&
+        (trainer == null || String(trainer).trim() === "")
+      )
+        throw new Error(`“${field.label}”, row ${row}: trainer is missing.`);
+      const detail = [
+        trainer ? `W/ ${trainer}` : "",
+        extra != null && String(extra).trim()
+          ? `${extra}${source.extraFormat === "minutes" ? " min" : ""}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      blocks.push(`${clock}  ${title}${detail ? `\n${detail}` : ""}`);
+    }
+    const text = blocks.join("\n");
+    if (field.required && !text)
+      throw new Error(`“${field.label}” has no scheduled classes.`);
+    return text;
+  }
   if (source.kind === "text") cell = { value: source.text, text: source.text };
   if (source.kind === "calendar")
     cell = {

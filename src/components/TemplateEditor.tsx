@@ -13,6 +13,7 @@ import { resolveField } from "../lib/mapping";
 import { tableData } from "../lib/spreadsheet";
 import { Field, Modal, Notice } from "./ui";
 import { validateProfile } from "../lib/storage";
+import { ScheduleBlockSource } from "./ScheduleBlockSource";
 
 export function TemplateEditor({
   profile,
@@ -167,6 +168,7 @@ export function TemplateEditor({
                       width: `${f.width * 100}%`,
                       height: `${f.height * 100}%`,
                       color: f.color,
+                      backgroundColor: f.background,
                       textAlign: f.align,
                       fontFamily:
                         f.fontFamily === "Serif"
@@ -319,25 +321,41 @@ export function TemplateEditor({
                     sourceChange(
                       kind === "calendar"
                         ? { kind, key: "schedule" }
-                        : kind === "column"
+                        : kind === "scheduleBlock"
                           ? {
                               kind,
                               sheet: workbook?.sheets[0]?.name || "",
-                              column: "A",
+                              firstRow: 5,
+                              lastRow: 20,
+                              timeColumn: "A",
+                              titleColumn: "C",
+                              trainerColumn: "B",
+                              extraColumn: "D",
+                              extraFormat: "text",
+                              skipRows: [],
                             }
-                          : kind === "cell"
+                          : kind === "column"
                             ? {
                                 kind,
                                 sheet: workbook?.sheets[0]?.name || "",
-                                address: "A1",
+                                column: "A",
                               }
-                            : { kind: "text", text: "" },
+                            : kind === "cell"
+                              ? {
+                                  kind,
+                                  sheet: workbook?.sheets[0]?.name || "",
+                                  address: "A1",
+                                }
+                              : { kind: "text", text: "" },
                     );
                   }}
                 >
                   <option value="calendar">Calendar</option>
                   <option value="column">Spreadsheet column</option>
                   <option value="cell">Spreadsheet cell</option>
+                  <option value="scheduleBlock">
+                    Spreadsheet schedule block
+                  </option>
                   <option value="text">Fixed text</option>
                 </select>
               </Field>
@@ -359,6 +377,13 @@ export function TemplateEditor({
                     <option value="title">Heading</option>
                   </select>
                 </Field>
+              )}
+              {field.source.kind === "scheduleBlock" && (
+                <ScheduleBlockSource
+                  source={field.source}
+                  workbook={workbook}
+                  change={sourceChange}
+                />
               )}
               {field.source.kind === "text" && (
                 <Field label="Text">
@@ -463,6 +488,32 @@ export function TemplateEditor({
                     </Field>
                   )}
                 </>
+              )}
+              <Field
+                label="Text panel background"
+                hint="Use a solid panel to cover old text on a populated image. The original file stays intact."
+              >
+                <select
+                  value={field.background ? "solid" : "transparent"}
+                  onChange={(e) =>
+                    update({
+                      background:
+                        e.target.value === "solid" ? "#000000" : undefined,
+                    })
+                  }
+                >
+                  <option value="transparent">Transparent</option>
+                  <option value="solid">Solid color</option>
+                </select>
+              </Field>
+              {field.background && (
+                <Field label="Panel color">
+                  <input
+                    type="color"
+                    value={field.background}
+                    onChange={(e) => update({ background: e.target.value })}
+                  />
+                </Field>
               )}
               <div className="form-grid compact">
                 <Field label="Font">

@@ -180,6 +180,51 @@ describe("spreadsheet import and mappings", () => {
   });
 });
 describe("document coordinates, text fitting and filenames", () => {
+  it("combines schedule blocks in source order, preserving Turkish names and skipping empty slots and headings", () => {
+    const source = {
+      kind: "scheduleBlock" as const,
+      sheet: "Grid",
+      firstRow: 5,
+      lastRow: 8,
+      timeColumn: "A",
+      trainerColumn: "B",
+      titleColumn: "C",
+      extraColumn: "D",
+      extraFormat: "text" as const,
+      skipRows: [7],
+    };
+    const workbook = {
+      name: "grid.xlsx",
+      warnings: [],
+      sheets: [
+        {
+          name: "Grid",
+          rowCount: 8,
+          columnCount: 4,
+          cells: {
+            A5: { value: new Date("1899-12-30T08:00:00Z"), text: "08:00" },
+            B5: { value: "İpek", text: "İpek" },
+            C5: { value: "CYCLE", text: "CYCLE" },
+            D5: { value: "EXPRESS", text: "EXPRESS" },
+            A6: { value: 0.5, text: "12:00" },
+            A7: { value: "STUDIO", text: "STUDIO" },
+            C7: { value: "STUDIO", text: "STUDIO" },
+            A8: { value: 0.75, text: "18:00" },
+            B8: { value: "Özge", text: "Özge" },
+            C8: { value: "PILATES", text: "PILATES" },
+          },
+        },
+      ],
+    };
+    const p = { ...defaultProfiles()[0], fields: [makeField({ source })] };
+    expect(resolveProfile(p, { workbook, locale: "tr-TR" })[0].text).toBe(
+      "08:00  CYCLE\nW/ İpek · EXPRESS\n\n18:00  PILATES\nW/ Özge",
+    );
+    workbook.sheets[0].cells.B8.value = "";
+    expect(() => resolveProfile(p, { workbook, locale: "tr-TR" })).toThrow(
+      "trainer is missing",
+    );
+  });
   it("keeps normalized placement invariant at different scales", () => {
     const field = makeField({
       x: 0.2,

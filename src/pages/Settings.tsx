@@ -40,6 +40,9 @@ export function Settings({
     [restore, setRestore] = useState<{
       state: StudioState;
       profiles: TemplateProfile[];
+      fonts?: Partial<
+        Record<"regular" | "bold" | "black" | "italic", ArrayBuffer>
+      >;
     }>();
   async function run(fn: () => Promise<void>) {
     setBusy(true);
@@ -167,6 +170,7 @@ export function Settings({
                       setRestore({
                         state: data.state,
                         profiles: data.profiles,
+                        fonts: data.fonts,
                       });
                     });
                   e.target.value = "";
@@ -292,7 +296,11 @@ export function Settings({
               disabled={busy}
               onClick={() =>
                 run(async () => {
-                  await replaceAll(restore.state, restore.profiles);
+                  await replaceAll(
+                    restore.state,
+                    restore.profiles,
+                    restore.fonts,
+                  );
                   restored(restore.state, restore.profiles);
                   setDraft(restore.state.settings);
                   setRestore(undefined);
