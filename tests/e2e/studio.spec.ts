@@ -518,6 +518,9 @@ test("main UA workflow creates cover and all three schedules from one workbook, 
     page.getByRole("button", { name: "UA story", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText("UA artwork & Gotham included")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Download cover PNG", exact: true }),
+  ).toBeDisabled();
   await page.getByLabel("Drop the UA weekly workbook here").setInputFiles({
     name: "UA_Weekly_Schedule_MASLAK, GÖKTÜRK & LIVE.xlsx",
     mimeType:
@@ -528,7 +531,9 @@ test("main UA workflow creates cover and all three schedules from one workbook, 
     page.getByAltText("MASLAK weekly schedule preview"),
   ).toBeVisible();
   const result = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Download all images" }).click();
+  await page
+    .getByRole("button", { name: "Download all as ZIP", exact: true })
+    .click();
   const output = await result;
   const JSZip = (await import("jszip")).default;
   const zip = await JSZip.loadAsync(await readFile((await output.path())!));
@@ -618,6 +623,22 @@ test("main UA workflow creates cover and all three schedules from one workbook, 
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+  const directImages = [
+    ["Download cover PNG", "01-Cover.png"],
+    ["Download MASLAK PNG", "MASLAK-Weekly-Schedule.png"],
+    ["Download GÖKTÜRK PNG", "GÖKTÜRK-Weekly-Schedule.png"],
+    ["Download LIVE PNG", "LIVE-Weekly-Schedule.png"],
+  ];
+  for (const [label, filename] of directImages) {
+    const result = page.waitForEvent("download");
+    await page.getByRole("button", { name: label, exact: true }).click();
+    const image = await result;
+    expect(image.suggestedFilename()).toBe(filename);
+    const bytes = await readFile((await image.path())!);
+    expect(bytes.equals(await zip.file(filename)!.async("nodebuffer"))).toBe(
+      true,
+    );
+  }
   await page.screenshot({
     path: `${info.outputDir}/ua-mobile.png`,
     fullPage: true,
@@ -639,7 +660,21 @@ test("main UA workflow creates cover and all three schedules from one workbook, 
       page.getByAltText("MASLAK weekly schedule preview"),
     ).toBeVisible();
     const offline = page.waitForEvent("download");
-    await page.getByRole("button", { name: "Download all images" }).click();
+    await page
+      .getByRole("button", { name: "Download all as ZIP", exact: true })
+      .click();
     expect((await offline).suggestedFilename()).toBe("UA-Weekly-Schedules.zip");
+    const image = page.waitForEvent("download");
+    await page
+      .getByRole("button", { name: "Download cover PNG", exact: true })
+      .click();
+    expect((await image).suggestedFilename()).toBe("01-Cover.png");
   }
+  await page
+    .getByRole("button", { name: "Clear weekly workbook", exact: true })
+    .click();
+  for (const [label] of directImages)
+    await expect(
+      page.getByRole("button", { name: label, exact: true }),
+    ).toBeDisabled();
 });

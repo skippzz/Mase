@@ -1,12 +1,12 @@
 # Mase — the private training studio
 
-A static, browser-local Excel-to-image application for Urban Active weekly schedules. Its main workflow is one workbook upload followed by automatically prepared, branded images for WhatsApp. The header switches between **UA story** and **Studio tools**. UA story is the default, with the UA black/lime palette and Gotham typography; secondary navigation is hidden. Studio tools reveals Calendar, Clients, Documents, Templates, and Settings in the light studio interface, with a short fade/slide transition. Reduced-motion preferences disable animation. Switching preserves the current UA upload and preview and returns to the last studio page.
+A static, browser-local Excel-to-image application for Urban Active weekly schedules. Its main workflow is one workbook upload followed by automatically prepared, branded Instagram Story images, which can also be shared on WhatsApp. The header switches between **UA story** and **Studio tools**. UA story is the default, with the UA black/lime palette and Gotham typography; secondary navigation is hidden. Studio tools reveals Calendar, Clients, Documents, Templates, and Settings in the light studio interface, with a short fade/slide transition. Reduced-motion preferences disable animation. Switching preserves the current UA upload and preview and returns to the last studio page.
 
 ## Primary workflow: UA weekly images
 
 1. Open **UA story** (the default workspace).
 2. Upload the normal UA `.xlsx` workbook.
-3. MASLAK, GÖKTÜRK, and LIVE are extracted automatically. Preview each image or download the complete ZIP with the cover and three 1080 × 1920 PNGs.
+3. MASLAK, GÖKTÜRK, and LIVE are extracted automatically. **Download & share** offers separate Cover, MASLAK, GÖKTÜRK, and LIVE PNG downloads for mobile use. Every image is 1080 × 1920. A ZIP containing all four images remains optional.
 
 The importer discovers the `TRAINER` / `DERS` day blocks from their headers and preserves the workbook's cycle/studio grouping and row order. It reads actual Excel time cells, trainer names, themes, and LIVE durations. LIVE content comes from `UA+ FILM` (also accepts `UA+ LIVE` or `LIVE`), independent of the old image reference. Empty unassigned slots are omitted; incomplete assigned classes and unresolved formulas produce explicit errors. Missing location sheets are reported before downloading available outputs.
 

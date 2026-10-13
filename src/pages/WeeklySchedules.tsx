@@ -40,6 +40,7 @@ export function WeeklySchedules({
     [busy, setBusy] = useState(false),
     [progress, setProgress] = useState("");
   const [images, setImages] = useState<(ScheduleImage & { url: string })[]>([]),
+    [coverImage, setCoverImage] = useState<Blob>(),
     [zip, setZip] = useState<Blob>(),
     [selected, setSelected] = useState("MASLAK");
   const [fonts, setFonts] = useState<UaFontStatus>(),
@@ -57,6 +58,7 @@ export function WeeklySchedules({
     let live = true;
     const urls: string[] = [];
     setImages([]);
+    setCoverImage(undefined);
     setZip(undefined);
     if (!imported || !fonts) {
       setBusy(false);
@@ -82,13 +84,15 @@ export function WeeklySchedules({
         archive.file(image.filename, await image.blob.arrayBuffer());
       const cover = await fetch(`${import.meta.env.BASE_URL}ua/cover.png`);
       if (!cover.ok) throw new Error("The cover artwork could not be loaded.");
-      archive.file("01-Cover.png", await cover.arrayBuffer());
+      const coverBlob = await cover.blob();
+      archive.file("01-Cover.png", await coverBlob.arrayBuffer());
       const pack = await archive.generateAsync({
         type: "blob",
         compression: "STORE",
       });
       if (live) {
         setImages(output);
+        setCoverImage(coverBlob);
         setZip(pack);
         setSelected(output[0].location);
         setProgress("");
@@ -224,19 +228,51 @@ export function WeeklySchedules({
             <span className="step-label">
               <i>03</i>Download & share
             </span>
+            <div
+              className="ua-image-downloads"
+              role="group"
+              aria-label="Download individual story images"
+            >
+              {(["Cover", "MASLAK", "GÖKTÜRK", "LIVE"] as const).map(
+                (label) => {
+                  const image = images.find(
+                    (image) => image.location === label,
+                  );
+                  const blob = label === "Cover" ? coverImage : image?.blob;
+                  const imageFilename =
+                    label === "Cover" ? "01-Cover.png" : image?.filename;
+                  return (
+                    <button
+                      key={label}
+                      className="button primary"
+                      aria-label={`Download ${label === "Cover" ? "cover" : label} PNG`}
+                      disabled={!blob || busy || uploading}
+                      onClick={() =>
+                        blob && imageFilename && download(blob, imageFilename)
+                      }
+                    >
+                      <ArrowDownToLine size={15} />
+                      {label}
+                    </button>
+                  );
+                },
+              )}
+            </div>
+            {(busy || uploading) && (
+              <p className="muted" role="status">
+                {progress || "Preparing your images…"}
+              </p>
+            )}
             <button
-              className="button primary download-button"
+              className="button secondary download-button ua-zip-download"
               disabled={!zip || busy || uploading}
               onClick={() => zip && download(zip, "UA-Weekly-Schedules.zip")}
             >
               <ArrowDownToLine size={17} />
-              {busy || uploading
-                ? progress || "Preparing your images…"
-                : "Download all images"}
+              Download all as ZIP
             </button>
             <p className="muted">
-              Cover + full-resolution 1080 × 1920 PNGs. Extract the ZIP and
-              attach the images to WhatsApp.
+              Full-resolution 1080 × 1920 PNGs for Instagram Stories.
             </p>
             {fonts && (
               <div
