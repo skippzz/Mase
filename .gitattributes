@@ -1,0 +1,11 @@
+* text=auto eol=lf
+*.png binary
+*.ttf binary
+*.woff2 binary
+*.pdf binary
+*.otf binary
+*.pfb binary
+*.bcmap binary
+# Keep upstream license wording and whitespace intact.
+public/**/LICENSE* whitespace=-trailing-space,-blank-at-eof
+public/fonts/*OFL.txt whitespace=-trailing-space,-blank-at-eof
