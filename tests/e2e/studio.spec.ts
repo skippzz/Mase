@@ -520,7 +520,12 @@ test("main UA workflow creates cover and all three schedules from one workbook, 
   await expect(page.getByText("UA artwork & Gotham included")).toBeVisible();
   await page
     .getByLabel("Drop the UA weekly workbook here")
-    .setInputFiles(`${fixtureDir}/ua-week.xlsx`);
+    .setInputFiles({
+      name: "UA_Weekly_Schedule_MASLAK, GÖKTÜRK & LIVE.xlsx",
+      mimeType:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      buffer: await readFile(`${fixtureDir}/ua-week.xlsx`),
+    });
   await expect(
     page.getByAltText("MASLAK weekly schedule preview"),
   ).toBeVisible();
@@ -612,7 +617,12 @@ test("main UA workflow creates cover and all three schedules from one workbook, 
     await page.reload();
     await page
       .getByLabel("Drop the UA weekly workbook here")
-      .setInputFiles(`${fixtureDir}/ua-week.xlsx`);
+      .setInputFiles({
+        name: "UA_Weekly_Schedule_MASLAK, GÖKTÜRK & LIVE.xlsx",
+        mimeType:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        buffer: await readFile(`${fixtureDir}/ua-week.xlsx`),
+      });
     await expect(
       page.getByAltText("MASLAK weekly schedule preview"),
     ).toBeVisible();
