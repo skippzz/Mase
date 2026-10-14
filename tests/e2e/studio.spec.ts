@@ -293,8 +293,18 @@ test("custom image background, drag mapping, saved template reuse and original d
   await page.mouse.move(bounds!.x + 24, bounds!.y + 28);
   await page.mouse.up();
   await expect(modal.getByLabel("Left %")).not.toHaveValue("10");
+  const previousPreview = await page
+    .getByAltText("Generated document preview")
+    .getAttribute("src");
   await modal.getByRole("button", { name: "Save template" }).click();
+  await expect(modal).not.toBeVisible();
+  await expect(
+    page.getByAltText("Generated document preview"),
+  ).not.toHaveAttribute("src", previousPreview!);
   await expect(page.getByAltText("Generated document preview")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Download schedule image", exact: true }),
+  ).toBeEnabled();
   const result = page.waitForEvent("download");
   await page.getByRole("button", { name: "Download schedule image" }).click();
   const output = await result;
