@@ -572,7 +572,7 @@ test("main UA workflow creates cover and all three schedules from one workbook, 
         throw new Error("The day card outline could not be found.");
       };
       const firstRowBottom = yellowEdge(95, 620, 655);
-      const fridayTop = yellowEdge(610, 655, 950);
+      const fridayTop = yellowEdge(95, 655, 950);
       expect(fridayTop - firstRowBottom).toBeGreaterThan(30);
       expect(fridayTop - firstRowBottom).toBeLessThan(50);
       await writeFile(`${info.outputDir}/ua-live.png`, bytes);

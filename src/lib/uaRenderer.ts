@@ -292,10 +292,7 @@ export async function renderUaSchedule(
     ? firstTop + tallest(first, rowHeight) + rowGap
     : firstTop;
   for (const day of last) {
-    const x =
-      schedule.location === "LIVE" && last.length === 1
-        ? 548
-        : 35 + (day.day - 4) * 256.5;
+    const x = 35 + (day.day - 4) * 256.5;
     if (lastTop + dayHeight(day, rowHeight) > 1670)
       throw new Error(
         `${schedule.location} ${day.label} has too many classes to fit above the logo.`,
