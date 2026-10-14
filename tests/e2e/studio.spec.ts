@@ -75,6 +75,25 @@ test.beforeAll(async () => {
     s.getCell("G4").value = "ÖZGE";
     s.getCell("H4").value = "STRENGTH";
     if (name === "UA+ FILM") {
+      for (const [time, trainer, title, duration, label] of [
+        ["A", "B", "C", "D", "PAZARTESİ"],
+        ["F", "G", "H", "I", "SALI"],
+        ["K", "L", "M", "N", "ÇARŞAMBA"],
+        ["P", "Q", "R", "S", "PERŞEMBE"],
+      ]) {
+        s.getCell(`${trainer}2`).value = label;
+        s.getCell(`${trainer}3`).value = "TRAINER";
+        s.getCell(`${title}3`).value = "DERS";
+        s.getCell(`${duration}3`).value = "SÜRE";
+        for (const row of [4, 5]) {
+          s.getCell(`${time}${row}`).value ??= (row + 5) / 24;
+          s.getCell(`${time}${row}`).numFmt = "hh:mm";
+          s.getCell(`${trainer}${row}`).value ??= "ÖZGE";
+          s.getCell(`${title}${row}`).value ??=
+            row === 4 ? "CIRCUIT TRAINING" : "YOGA";
+          s.getCell(`${duration}${row}`).value ??= row === 4 ? 30 : 40;
+        }
+      }
       s.getCell("V2").value = "CUMA";
       s.getCell("V3").value = "TRAINER";
       s.getCell("W3").value = "DERS";
@@ -555,26 +574,37 @@ test("main UA workflow creates cover and all three schedules from one workbook, 
         .removeAlpha()
         .raw()
         .toBuffer({ resolveWithObject: true });
-      const yellowEdge = (left: number, top: number, bottom: number) => {
-        for (let y = top; y < bottom; y++) {
-          let yellow = 0;
-          for (let x = left; x < left + 120; x++) {
-            const index = (y * pixels.width + x) * pixels.channels;
-            if (
-              data[index] === 215 &&
-              data[index + 1] === 223 &&
-              data[index + 2] === 32
-            )
-              yellow++;
-          }
-          if (yellow > 80) return y;
+      const edges: number[] = [];
+      let previous = -2;
+      for (let y = 400; y < 1660; y++) {
+        let yellow = 0;
+        for (let x = 350; x < 730; x++) {
+          const index = (y * pixels.width + x) * pixels.channels;
+          if (
+            data[index] === 215 &&
+            data[index + 1] === 223 &&
+            data[index + 2] === 32
+          )
+            yellow++;
         }
-        throw new Error("The day card outline could not be found.");
-      };
-      const firstRowBottom = yellowEdge(95, 620, 655);
-      const fridayTop = yellowEdge(95, 655, 950);
-      expect(fridayTop - firstRowBottom).toBeGreaterThan(30);
-      expect(fridayTop - firstRowBottom).toBeLessThan(50);
+        if (yellow > 320) {
+          if (y > previous + 1) edges.push(y);
+          previous = y;
+        }
+      }
+      expect(edges).toHaveLength(10);
+      for (let day = 0; day < 5; day++) {
+        const middle = Math.round((edges[day * 2] + edges[day * 2 + 1]) / 2);
+        for (const side of [317, 763]) {
+          const index = (middle * pixels.width + side) * pixels.channels;
+          expect([...data.subarray(index, index + 3)]).toEqual([215, 223, 32]);
+        }
+        if (day > 0) {
+          const gap = edges[day * 2] - edges[day * 2 - 1];
+          expect(gap).toBeGreaterThan(13);
+          expect(gap).toBeLessThan(19);
+        }
+      }
       await writeFile(`${info.outputDir}/ua-live.png`, bytes);
     }
   }

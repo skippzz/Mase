@@ -253,6 +253,102 @@ function drawDay(
     baseline += rowHeight;
   }
 }
+function liveDayHeight(day: ClassDay) {
+  return 140 + Math.max(0, day.sessions.length - 1) * 64;
+}
+function drawLiveDay(
+  ctx: CanvasRenderingContext2D,
+  day: ClassDay,
+  y: number,
+  scale: number,
+) {
+  const x = 317,
+    width = 446,
+    height = liveDayHeight(day) * scale;
+  ctx.strokeStyle = YELLOW;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.roundRect(x, y, width, height, 40 * scale);
+  ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = YELLOW;
+  ctx.textAlign = "center";
+  font(ctx, "black", 27 * scale);
+  text(ctx, day.label, x + width / 2, y + 50 * scale, "black");
+  ctx.fillStyle = "#ffffff";
+  ctx.textAlign = "left";
+  if (!day.sessions.length) {
+    font(ctx, "regular", 20 * scale);
+    text(ctx, "No classes", x + 30, y + 93 * scale, "regular");
+    return;
+  }
+  const spacing = (day.sessions.length === 2 ? 55 : 64) * scale;
+  day.sessions.forEach((session, index) => {
+    const baseline = y + 93 * scale + index * spacing;
+    ctx.textAlign = "left";
+    font(ctx, "regular", 20 * scale);
+    text(ctx, session.time, x + 30, baseline, "regular");
+    text(ctx, "-", x + 141, baseline, "regular");
+    font(ctx, "bold", 19 * scale);
+    const lines = splitTitle(ctx, session.title, 136);
+    ctx.textAlign = "center";
+    lines.forEach((line, lineIndex) =>
+      text(ctx, line, x + 228, baseline + lineIndex * 18 * scale, "bold"),
+    );
+    ctx.textAlign = "left";
+    if (session.extra) {
+      const duration = session.extra.replace(/\s*MIN$/i, "dk");
+      font(ctx, "regular", 20 * scale);
+      if (ctx.measureText(duration).width > 88)
+        throw new Error(
+          `LIVE duration “${session.extra}” does not fit in its column.`,
+        );
+      text(ctx, "-", x + 302, baseline, "regular");
+      text(ctx, duration, x + 342, baseline, "regular");
+    }
+    const name = `W/ ${trainerDisplay(session.trainer)}`;
+    let nameSize = 13.5 * scale;
+    const oblique = trainerFont(ctx, name, nameSize);
+    while (ctx.measureText(name).width > 110 && nameSize > 11 * scale)
+      trainerFont(ctx, name, (nameSize -= 0.25 * scale));
+    if (ctx.measureText(name).width > 110)
+      throw new Error(
+        `Trainer name “${session.trainer}” is too long for the LIVE time column. Use a shorter display name in Excel.`,
+      );
+    text(
+      ctx,
+      name,
+      x + 30,
+      baseline + 18 * scale,
+      oblique ? "bold" : "italic",
+      oblique,
+    );
+  });
+}
+function drawLiveSchedule(
+  ctx: CanvasRenderingContext2D,
+  schedule: LocationSchedule,
+) {
+  const days = [...schedule.days].sort((a, b) => a.day - b.day);
+  const gap = 16,
+    top = 439,
+    bottom = 1660;
+  const total = days.reduce((sum, day) => sum + liveDayHeight(day), 0);
+  const scale = Math.min(
+    1,
+    (bottom - top - gap * Math.max(0, days.length - 1)) / total,
+  );
+  if (!days.length || scale < 0.8)
+    throw new Error(
+      "LIVE has too many classes for one readable story. Split the week across separate workbook exports.",
+    );
+  let y = top;
+  for (const day of days) {
+    drawLiveDay(ctx, day, y, scale);
+    y += liveDayHeight(day) * scale + gap;
+  }
+}
 export async function renderUaSchedule(
   schedule: LocationSchedule,
 ): Promise<ScheduleImage> {
@@ -266,38 +362,42 @@ export async function renderUaSchedule(
   font(ctx, "black", 60);
   text(ctx, schedule.location, 793, 295, "black");
   ctx.textAlign = "left";
-  const firstTop = schedule.location === "MASLAK" ? 394 : 486;
-  const first = schedule.days.filter((d) => d.day < 4),
-    last = schedule.days.filter((d) => d.day >= 4);
-  const rowGap = 40;
-  const tallest = (days: ClassDay[], size: number) =>
-    days.length ? Math.max(...days.map((day) => dayHeight(day, size))) : 0;
-  let rowHeight = 55;
-  while (
-    rowHeight >= 44 &&
-    firstTop +
-      tallest(first, rowHeight) +
-      (first.length && last.length ? rowGap : 0) +
-      tallest(last, rowHeight) >
-      1670
-  )
-    rowHeight--;
-  if (rowHeight < 44)
-    throw new Error(
-      `${schedule.location} has too many classes for one readable image. Split the week across separate workbook exports.`,
-    );
-  for (const day of first)
-    drawDay(ctx, day, 35 + day.day * 256.5, firstTop, rowHeight);
-  const lastTop = first.length
-    ? firstTop + tallest(first, rowHeight) + rowGap
-    : firstTop;
-  for (const day of last) {
-    const x = 35 + (day.day - 4) * 256.5;
-    if (lastTop + dayHeight(day, rowHeight) > 1670)
+  if (schedule.location === "LIVE") {
+    drawLiveSchedule(ctx, schedule);
+  } else {
+    const firstTop = schedule.location === "MASLAK" ? 394 : 486;
+    const first = schedule.days.filter((d) => d.day < 4),
+      last = schedule.days.filter((d) => d.day >= 4);
+    const rowGap = 40;
+    const tallest = (days: ClassDay[], size: number) =>
+      days.length ? Math.max(...days.map((day) => dayHeight(day, size))) : 0;
+    let rowHeight = 55;
+    while (
+      rowHeight >= 44 &&
+      firstTop +
+        tallest(first, rowHeight) +
+        (first.length && last.length ? rowGap : 0) +
+        tallest(last, rowHeight) >
+        1670
+    )
+      rowHeight--;
+    if (rowHeight < 44)
       throw new Error(
-        `${schedule.location} ${day.label} has too many classes to fit above the logo.`,
+        `${schedule.location} has too many classes for one readable image. Split the week across separate workbook exports.`,
       );
-    drawDay(ctx, day, x, lastTop, rowHeight);
+    for (const day of first)
+      drawDay(ctx, day, 35 + day.day * 256.5, firstTop, rowHeight);
+    const lastTop = first.length
+      ? firstTop + tallest(first, rowHeight) + rowGap
+      : firstTop;
+    for (const day of last) {
+      const x = 35 + (day.day - 4) * 256.5;
+      if (lastTop + dayHeight(day, rowHeight) > 1670)
+        throw new Error(
+          `${schedule.location} ${day.label} has too many classes to fit above the logo.`,
+        );
+      drawDay(ctx, day, x, lastTop, rowHeight);
+    }
   }
   const blob = await new Promise<Blob>((resolve, reject) =>
     canvas.toBlob(
