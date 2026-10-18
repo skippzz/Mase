@@ -214,12 +214,23 @@
 .ua-mode .input-label small {
   color: #afbf94;
 }
-.ua-mode input {
+.ua-mode input,
+.ua-mode select {
   background: #242e1a;
   border-color: #4d5f35;
   color: #dfe8cc;
 }
-.ua-mode :is(button, a, input, summary):focus-visible {
+.ua-worksheet-choices {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin-top: 16px;
+}
+.ua-worksheet-choices select {
+  width: 100%;
+  min-width: 0;
+}
+.ua-mode :is(button, a, input, select, summary):focus-visible {
   outline-color: #d7df20;
 }
 .ua-mode ::selection {

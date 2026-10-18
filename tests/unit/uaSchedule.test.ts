@@ -3,6 +3,7 @@ import {
   extractUaSchedules,
   extractLocation,
   classTime,
+  uaWorksheetChoices,
 } from "../../src/lib/uaSchedule";
 import type { Worksheet, WorkbookData } from "../../src/types";
 function grid(): Worksheet {
@@ -41,6 +42,40 @@ function grid(): Worksheet {
   };
 }
 describe("UA weekly schedule extraction", () => {
+  it("uses the single weekly copy instead of the undated base, including decomposed Turkish sheet names", () => {
+    const base = grid();
+    const weekly = structuredClone(base);
+    weekly.name = "Maslak 19-25 EKİM";
+    weekly.cells.D5 = { value: "Artist One, Artist Two & Artist Three", text: "Artist One, Artist Two & Artist Three" };
+    const gokturk = structuredClone(base);
+    gokturk.name = "GÖKTÜRK 19-25 EKİM";
+    const workbook: WorkbookData = { name: "week.xlsx", sheets: [base, weekly, gokturk], warnings: [] };
+    const result = extractUaSchedules(workbook);
+    expect(result.locations[0].sheet).toBe(weekly.name);
+    expect(result.locations[0].days[0].sessions[0].extra).toBe(weekly.cells.D5.value);
+    expect(result.locations[1].location).toBe("GÖKTÜRK");
+    expect(extractUaSchedules(workbook, { MASLAK: "MASLAK" }).locations[0].sheet).toBe("MASLAK");
+  });
+  it("requires a worksheet choice when multiple weekly copies exist, regardless of tab order", () => {
+    const one = grid(), two = grid();
+    one.name = "Maslak 19-25 EKİM";
+    two.name = "Maslak 26 EKİM-1 KASIM";
+    const workbook: WorkbookData = { name: "week.xlsx", sheets: [grid(), two, one], warnings: [] };
+    expect(uaWorksheetChoices(workbook)[0].preferred).toBeUndefined();
+    expect(() => extractUaSchedules(workbook)).toThrow("Choose the MASLAK worksheet");
+    expect(extractUaSchedules(workbook, { MASLAK: one.name }).locations[0].sheet).toBe(one.name);
+  });
+  it("skips an unlabeled unused day block but rejects it when a class is assigned", () => {
+    const sheet = grid();
+    sheet.columnCount = 14;
+    sheet.cells.L3 = { value: "TRAINER", text: "TRAINER" };
+    sheet.cells.M3 = { value: "DERS", text: "DERS" };
+    sheet.cells.K5 = { value: "09:00", text: "09:00" };
+    expect(extractLocation(sheet, "LIVE").days).toHaveLength(2);
+    sheet.cells.L5 = { value: "İPEK", text: "İPEK" };
+    sheet.cells.M5 = { value: "CYCLE", text: "CYCLE" };
+    expect(() => extractLocation(sheet, "LIVE")).toThrow("weekday heading is missing");
+  });
   it("discovers day blocks, retains source order and sections, and ignores unassigned time slots", () => {
     const schedule = extractLocation(grid(), "MASLAK");
     expect(schedule.count).toBe(3);

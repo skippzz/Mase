@@ -161,11 +161,51 @@ function splitTitle(
     );
   return lines;
 }
-function dayHeight(day: ClassDay, rowHeight: number) {
+function sessionLayout(
+  ctx: CanvasRenderingContext2D,
+  session: ClassSession,
+  rowHeight: number,
+) {
+  const theme = session.extra.toUpperCase();
+  font(ctx, "bold", 19);
+  const titleLines = splitTitle(ctx, session.title, 123);
+  font(ctx, "regular", 9);
+  if (!theme || ctx.measureText(theme).width <= 123)
+    return {
+      titleLines, themeLines: theme ? [theme] : [], themeSize: 9,
+      themeX: 116, themeY: titleLines.length > 1 ? 34 : 20,
+      height: rowHeight,
+    };
+  font(ctx, "regular", 11);
+  const themeLines: string[] = [];
+  let line = "";
+  for (const word of theme.split(/\s+/)) {
+    if (line && ctx.measureText(`${line} ${word}`).width > 211) {
+      themeLines.push(line);
+      line = "";
+    }
+    for (const character of (line ? ` ${word}` : word)) {
+      if (line && ctx.measureText(line + character).width > 211) {
+        themeLines.push(line);
+        line = "";
+      }
+      line += character;
+    }
+  }
+  if (line) themeLines.push(line);
+  const themeY = titleLines.length > 1 ? 46 : 34;
+  return {
+    titleLines, themeLines, themeSize: 11, themeX: 17, themeY,
+    height: Math.max(rowHeight, themeY + (themeLines.length - 1) * 13 + 22),
+  };
+}
+function dayHeight(ctx: CanvasRenderingContext2D, day: ClassDay, rowHeight: number) {
   const groups = new Set(day.sessions.map((s) => s.group)).size;
   return (
     96 +
-    Math.max(1, day.sessions.length) * rowHeight +
+    (day.sessions.length
+      ? day.sessions.reduce((sum, session) => sum + sessionLayout(ctx, session, rowHeight).height, 0)
+      : rowHeight) +
     Math.max(0, groups - 1) * 12
   );
 }
@@ -177,7 +217,7 @@ function drawDay(
   rowHeight: number,
 ) {
   const w = 245,
-    h = dayHeight(day, rowHeight);
+    h = dayHeight(ctx, day, rowHeight);
   ctx.strokeStyle = YELLOW;
   ctx.lineWidth = 3;
   ctx.beginPath();
@@ -199,6 +239,7 @@ function drawDay(
   let baseline = y + 93,
     previous = day.sessions[0].group;
   for (const session of day.sessions) {
+    const layout = sessionLayout(ctx, session, rowHeight);
     if (session.group !== previous) {
       ctx.strokeStyle = YELLOW;
       ctx.lineWidth = 1.5;
@@ -214,7 +255,7 @@ function drawDay(
     text(ctx, session.time, x + 17, baseline, "regular");
     font(ctx, "bold", 19);
     text(ctx, "-", x + 94, baseline, "bold");
-    const lines = splitTitle(ctx, session.title, w - 122);
+    const lines = layout.titleLines;
     lines.forEach((line, i) =>
       text(ctx, line, x + 116, baseline + i * 18, "bold"),
     );
@@ -236,21 +277,16 @@ function drawDay(
       oblique,
     );
     if (session.extra) {
-      font(ctx, "regular", 9);
-      const theme = session.extra.toUpperCase();
-      if (ctx.measureText(theme).width > w - 122)
-        throw new Error(
-          `Theme “${session.extra}” does not fit. Shorten the theme in Excel.`,
-        );
-      text(
+      font(ctx, "regular", layout.themeSize);
+      layout.themeLines.forEach((theme, index) => text(
         ctx,
         theme,
-        x + 116,
-        baseline + (lines.length > 1 ? 34 : 20),
+        x + layout.themeX,
+        baseline + layout.themeY + index * 13,
         "regular",
-      );
+      ));
     }
-    baseline += rowHeight;
+    baseline += layout.height;
   }
 }
 function liveDayHeight(day: ClassDay) {
@@ -370,7 +406,7 @@ export async function renderUaSchedule(
       last = schedule.days.filter((d) => d.day >= 4);
     const rowGap = 40;
     const tallest = (days: ClassDay[], size: number) =>
-      days.length ? Math.max(...days.map((day) => dayHeight(day, size))) : 0;
+      days.length ? Math.max(...days.map((day) => dayHeight(ctx, day, size))) : 0;
     let rowHeight = 55;
     while (
       rowHeight >= 44 &&
@@ -392,7 +428,7 @@ export async function renderUaSchedule(
       : firstTop;
     for (const day of last) {
       const x = 35 + (day.day - 4) * 256.5;
-      if (lastTop + dayHeight(day, rowHeight) > 1670)
+      if (lastTop + dayHeight(ctx, day, rowHeight) > 1670)
         throw new Error(
           `${schedule.location} ${day.label} has too many classes to fit above the logo.`,
         );

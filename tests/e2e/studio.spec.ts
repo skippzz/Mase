@@ -109,6 +109,23 @@ test.beforeAll(async () => {
     }
   }
   await ua.xlsx.writeFile(`${fixtureDir}/ua-week.xlsx`);
+  const weekly = ua.addWorksheet("Maslak 19-25 EKİM");
+  ua.getWorksheet("MASLAK")!.eachRow((row) => row.eachCell((cell) => {
+    weekly.getCell(cell.address).value = cell.value;
+    weekly.getCell(cell.address).numFmt = cell.numFmt;
+  }));
+  weekly.getCell("D4").value = "Artist One, Artist Two & Artist Three";
+  weekly.getCell("I4").value = "Türkçe ROCK & Community Theme Ride";
+  const live = ua.getWorksheet("UA+ FILM")!;
+  live.getCell("AA2").value = "CUMARTESİ";
+  for (const [column, value] of [
+    ["AA3", "TRAINER"], ["AB3", "DERS"], ["AC3", "SÜRE"],
+    ["Z4", "10:00"], ["AA4", "İPEK"], ["AB4", "BOOTCAMP"],
+    ["AF3", "TRAINER"], ["AG3", "DERS"], ["AH3", "SÜRE"],
+    ["AE4", "09:00"],
+  ]) live.getCell(column).value = value;
+  live.getCell("AC4").value = 45;
+  await ua.xlsx.writeFile(`${fixtureDir}/ua-weekly-copy.xlsx`);
   await sharp({
     create: { width: 1080, height: 1350, channels: 4, background: "#f5e4d7" },
   })
@@ -531,6 +548,42 @@ test("production PWA relaunches and generates PNG and PDF entirely offline", asy
   await page.getByRole("button", { name: "Download PDF", exact: true }).click();
   expect((await pdfResult).suggestedFilename()).toMatch(/\.pdf$/);
   expect(external).toEqual([]);
+});
+
+test("UA weekly copies preserve long theme rides and a sixth LIVE day without using the old base", async ({ page }, info) => {
+  await page.goto("./");
+  await page.getByLabel("Drop the UA weekly workbook here").setInputFiles(`${fixtureDir}/ua-weekly-copy.xlsx`);
+  await expect(page.getByAltText("MASLAK weekly schedule preview")).toBeVisible();
+  await expect(page.getByLabel("MASLAK worksheet", { exact: true })).toHaveValue("Maslak 19-25 EKİM");
+  await page.locator(".data-review summary").click();
+  await expect(page.locator(".data-review")).toContainText("Artist One, Artist Two & Artist Three");
+  await expect(page.locator(".data-review")).toContainText("Maslak 19-25 EKİM!A4:D4");
+  const preview = await page.getByAltText("MASLAK weekly schedule preview").getAttribute("src");
+  const result = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download all as ZIP", exact: true }).click();
+  const zip = await (await import("jszip")).default.loadAsync(await readFile((await (await result).path())!));
+  await mkdir(info.outputDir, { recursive: true });
+  for (const location of ["MASLAK", "GÖKTÜRK", "LIVE"]) {
+    const bytes = await zip.file(`${location}-Weekly-Schedule.png`)!.async("nodebuffer");
+    const metadata = await sharp(bytes).metadata();
+    expect([metadata.width, metadata.height]).toEqual([1080, 1920]);
+    await writeFile(`${info.outputDir}/${location}.png`, bytes);
+  }
+  await page.getByRole("button", { name: "LIVE", exact: true }).click();
+  if (!await page.locator(".data-review").getAttribute("open").then((value) => value !== null))
+    await page.locator(".data-review summary").click();
+  await expect(page.locator(".data-review")).toContainText("SATURDAY");
+  await expect(page.locator(".data-review")).toContainText("45 MIN");
+  await expect(page.locator(".data-review")).not.toContainText("SUNDAY");
+  await page.getByLabel("MASLAK worksheet", { exact: true }).selectOption("MASLAK");
+  await expect(page.getByAltText("MASLAK weekly schedule preview")).toBeVisible();
+  await expect(page.getByAltText("MASLAK weekly schedule preview")).not.toHaveAttribute("src", preview!);
+  if (!await page.locator(".data-review").getAttribute("open").then((value) => value !== null))
+    await page.locator(".data-review summary").click();
+  await expect(page.locator(".data-review")).toContainText("Worksheet: MASLAK");
+  await expect(page.locator(".data-review")).not.toContainText("Artist One");
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
 test("main UA workflow creates cover and all three schedules from one workbook, online and offline", async ({

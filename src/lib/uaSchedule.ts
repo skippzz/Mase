@@ -43,6 +43,33 @@ export interface ScheduleImport {
   locations: LocationSchedule[];
   warnings: string[];
 }
+export type UaLocation = LocationSchedule["location"];
+export type WorksheetSelection = Partial<Record<UaLocation, string>>;
+const LOCATION_SHEETS = [
+  ["MASLAK", ["MASLAK"]],
+  ["GÖKTÜRK", ["GOKTURK"]],
+  ["LIVE", ["UA+ FILM", "UA+ LIVE", "LIVE"]],
+] as const;
+
+export function uaWorksheetChoices(workbook: WorkbookData) {
+  return LOCATION_SHEETS.map(([location, aliases]) => {
+    const sheets = workbook.sheets.filter((sheet) => {
+      const name = normalized(sheet.name.trim());
+      return aliases.some(
+        (alias) => name === alias ||
+          (name.startsWith(alias) && /^[\s_(/-]/.test(name.slice(alias.length))),
+      );
+    });
+    const weekly = sheets.filter(
+      (sheet) => !aliases.some((alias) => normalized(sheet.name.trim()) === alias),
+    );
+    // A single weekly copy takes precedence over the undated base sheet.
+    // Multiple weekly copies need an explicit choice, never workbook tab order.
+    const preferred = weekly.length === 1 ? weekly[0].name
+      : weekly.length === 0 && sheets.length === 1 ? sheets[0].name : undefined;
+    return { location, sheets, preferred };
+  });
+}
 function normalized(text: string) {
   return text
     .toLocaleUpperCase("tr-TR")
@@ -121,6 +148,12 @@ export function extractLocation(
       TURKISH_DAYS.indexOf(label) >= 0
         ? TURKISH_DAYS.indexOf(label)
         : UA_DAYS.indexOf(label as (typeof UA_DAYS)[number]);
+    if (day < 0 && !Array.from(
+      { length: Math.max(0, sheet.rowCount - headerRow) },
+      (_, index) => index + headerRow + 1,
+    ).some((row) => [trainerColumn, titleColumn].some(
+      (column) => String(value(sheet, `${column}${row}`) ?? "").trim(),
+    ))) continue;
     if (day < 0)
       throw new Error(
         `${sheet.name}!${trainerColumn}${headerRow - 1}: weekday heading is missing or unsupported.`,
@@ -186,17 +219,17 @@ export function extractLocation(
   if (!count) throw new Error(`“${sheet.name}” contains no scheduled classes.`);
   return { location, sheet: sheet.name, days, count };
 }
-export function extractUaSchedules(workbook: WorkbookData): ScheduleImport {
+export function extractUaSchedules(
+  workbook: WorkbookData,
+  selection: WorksheetSelection = {},
+): ScheduleImport {
   const locations: LocationSchedule[] = [],
     warnings: string[] = [];
-  for (const [location, candidates] of [
-    ["MASLAK", ["MASLAK"]],
-    ["GÖKTÜRK", ["GOKTURK"]],
-    ["LIVE", ["UA+ FILM", "UA+ LIVE", "LIVE"]],
-  ] as const) {
-    const sheet = workbook.sheets.find((s) =>
-      candidates.some((name) => normalized(s.name.trim()) === name),
-    );
+  for (const { location, sheets, preferred } of uaWorksheetChoices(workbook)) {
+    const name = selection[location] ?? preferred;
+    const sheet = sheets.find((sheet) => sheet.name === name);
+    if (sheets.length && !sheet)
+      throw new Error(`Choose the ${location} worksheet to use for this week's image.`);
     if (sheet) locations.push(extractLocation(sheet, location));
     else
       warnings.push(

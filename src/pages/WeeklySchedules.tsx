@@ -8,7 +8,13 @@ import {
 } from "lucide-react";
 import { FileDrop, Field, Modal, Notice } from "../components/ui";
 import { parseWorkbook } from "../lib/spreadsheet";
-import { extractUaSchedules, type ScheduleImport } from "../lib/uaSchedule";
+import {
+  extractUaSchedules,
+  uaWorksheetChoices,
+  type ScheduleImport,
+  type WorksheetSelection,
+} from "../lib/uaSchedule";
+import type { WorkbookData } from "../types";
 import {
   loadUaFonts,
   renderUaSchedule,
@@ -33,6 +39,8 @@ export function WeeklySchedules({
   resourceRevision?: number;
 }) {
   const uploadVersion = useRef(0);
+  const [workbook, setWorkbook] = useState<WorkbookData>();
+  const [worksheets, setWorksheets] = useState<WorksheetSelection>({});
   const [uploading, setUploading] = useState(false);
   const [imported, setImported] = useState<ScheduleImport>(),
     [filename, setFilename] = useState(""),
@@ -114,13 +122,22 @@ export function WeeklySchedules({
     setUploading(true);
     setError("");
     setImported(undefined);
+    setWorkbook(undefined);
+    setWorksheets({});
     setProgress("Reading your Excel…");
     try {
       const workbook = await parseWorkbook(file);
       if (version !== uploadVersion.current) return;
-      const schedules = extractUaSchedules(workbook);
+      const choices = uaWorksheetChoices(workbook);
+      const selection = Object.fromEntries(
+        choices.filter((choice) => choice.preferred).map(
+          (choice) => [choice.location, choice.preferred!],
+        ),
+      ) as WorksheetSelection;
       setFilename(file.name);
-      setImported(schedules);
+      setWorkbook(workbook);
+      setWorksheets(selection);
+      importWorksheets(workbook, selection);
     } catch (e) {
       if (version !== uploadVersion.current) return;
       setError((e as Error).message);
@@ -132,6 +149,19 @@ export function WeeklySchedules({
       }
     }
   }
+  function importWorksheets(source: WorkbookData, selection: WorksheetSelection) {
+    setImported(undefined);
+    setError("");
+    if (uaWorksheetChoices(source).some(
+      (choice) => choice.sheets.length && !selection[choice.location],
+    )) return;
+    try {
+      setImported(extractUaSchedules(source, selection));
+    } catch (error) {
+      setError((error as Error).message);
+    }
+  }
+  const worksheetChoices = workbook ? uaWorksheetChoices(workbook) : [];
   const shown = images.find((i) => i.location === selected);
   return (
     <>
@@ -176,11 +206,41 @@ export function WeeklySchedules({
                     setBusy(false);
                     setProgress("");
                     setImported(undefined);
+                    setWorkbook(undefined);
+                    setWorksheets({});
                     setFilename("");
                   }}
                 >
                   <X size={16} />
                 </button>
+              </div>
+            )}
+            {worksheetChoices.some((choice) => choice.sheets.length > 1) && (
+              <div className="ua-worksheet-choices">
+                <p className="muted">
+                  A weekly copy is used ahead of its undated base sheet. You can
+                  change the worksheet below.
+                </p>
+                {worksheetChoices.filter((choice) => choice.sheets.length > 1).map(
+                  (choice) => (
+                    <Field key={choice.location} label={`${choice.location} worksheet`}>
+                      <select
+                        value={worksheets[choice.location] ?? ""}
+                        disabled={busy || uploading}
+                        onChange={(event) => {
+                          const selection = { ...worksheets, [choice.location]: event.target.value };
+                          setWorksheets(selection);
+                          importWorksheets(workbook!, selection);
+                        }}
+                      >
+                        <option value="" disabled>Choose this week's worksheet</option>
+                        {choice.sheets.map((sheet) => (
+                          <option key={sheet.name} value={sheet.name}>{sheet.name}</option>
+                        ))}
+                      </select>
+                    </Field>
+                  ),
+                )}
               </div>
             )}
             <p className="muted">
@@ -372,6 +432,9 @@ export function WeeklySchedules({
               </div>
               <details className="data-review">
                 <summary>Check the extracted sessions</summary>
+                <p className="muted">
+                  Worksheet: {imported?.locations.find((location) => location.location === shown.location)?.sheet}
+                </p>
                 <div className="table-scroll">
                   <table>
                     <thead>
